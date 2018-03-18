@@ -1,0 +1,17 @@
+#ifndef ANUBIS_CONFIG_HPP
+#define ANUBIS_CONFIG_HPP
+
+/** Indicates that SSE4 has been enabled. */
+#cmakedefine ANUBIS_ENABLE_SSE
+
+/** Indicates that the host the software is running on is Big Endian. */
+#cmakedefine ANUBIS_HOST_IS_BIG_ENDIAN
+
+/** Indicates that the host the software is running on is Little Endian. */
+#cmakedefine ANUBIS_HOST_IS_LITTLE_ENDIAN
+
+/** Indicates if the Windows RPCRT4 library has been found. This is used for
+ * genrating UUIDs. */
+#cmakedefine ANUBIS_HAS_RPCRT4
+
+#endif /* ANUBIS_CONFIG_HPP */

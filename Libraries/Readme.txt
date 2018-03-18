@@ -1,0 +1,1 @@
+This directory contain any 3rd party libraries required to build Anubis.
