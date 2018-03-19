@@ -121,6 +121,37 @@ namespace Anubis
         }
       };
 
+
+      /*********************************************************************//**
+       * In order to optimise tree syncrhonisation, instead of rebuilding the
+       * tree each frame, a list of changes are tracked and a sync action
+       * simply has to implement these changes.
+       ************************************************************************/
+      struct ChangeRecord
+      {
+        /** The diffirent types of scene changes. */
+        enum class Types
+        {
+          kInsert,
+          kRemove,
+        };
+
+        /** The change the occured. */
+        Types fType;
+
+        /* If it was a remove, this is the node that was removed, if it was an
+         * insert, then this is the parent node that was inserted. */
+        Node * fPosition;
+
+        /* If it was an insert, then this is the data that was inserted, else
+         * nullptr. */
+        std::shared_ptr<Common::SubObj> fData;
+      };
+
+      /** The history of changes that occured since the last time a sync was
+       * performed. */
+      std::vector<ChangeRecord> fChangeHistory;
+
     protected:
 
 
@@ -150,6 +181,25 @@ namespace Anubis
        * @param scene
        ************************************************************************/
       void sync(const Scene * scene);
+
+      /*********************************************************************//**
+       * Insert a new node in the scene with the specified data and with a
+       * parent of the specified UUID. If the id == kNullUUID, then it implies
+       * the item should be made the root node of the tree.
+       *
+       * @param id    The id of the parent node where the new node should be
+       *              inserted.
+       * @param data  The data to associate with the node.
+       ************************************************************************/
+      void insert(const Common::UUID & id,
+                  std::shared_ptr<Common::SubObj> data);
+
+      /*********************************************************************//**
+       * Remove the node of the scene graph.
+       *
+       * @param id  The ID of the node to remove.
+       ************************************************************************/
+      void remove(const Common::UUID & id);
 
     };
   }

@@ -16,9 +16,12 @@ namespace Anubis
      **************************************************************************/
     class UUID final
     {
+    public:
+
       /** The number of octets used to decribe a UUID. */
       static constexpr const size_t kOctetCount = 16;
 
+    private:
       /** The octets representing the UUID. */
       uint8_t fOctets[kOctetCount];
 
@@ -27,7 +30,7 @@ namespace Anubis
       /*********************************************************************//**
        * Create a new UUID from scratch.
        ************************************************************************/
-      UUID();
+      UUID(bool isNull = false);
 
       /*********************************************************************//**
        * Comparison operator to check if two UUIDs match.
@@ -125,6 +128,9 @@ namespace Anubis
        ************************************************************************/
       void writeBinary(std::ostream & os) const;
     };
+
+    /** Define a NULL UUID type. */
+    static const UUID kNullUUID(true);
   }
 }
 

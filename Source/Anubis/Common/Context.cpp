@@ -6,7 +6,7 @@ using namespace Anubis::Common;
 Context::Context(const std::chrono::nanoseconds & updateRate) :
   fIsExecuting(false), kUpdateRate(updateRate)
 {
-  /* Start the physics thread. */
+  /* Start the thread. */
   fThread = std::thread(&Context::threadEntry, this);
 
   /* Set the executing flag here since this point wont be reached if an
@@ -17,7 +17,7 @@ Context::Context(const std::chrono::nanoseconds & updateRate) :
 /******************************************************************************/
 Context::~Context()
 {
-  /* Stop the main thread. */
+  /* Stop the thread. */
   if(fIsExecuting)
   {
     /* Set the executing flag to false. */
@@ -36,7 +36,7 @@ void Context::threadEntry()
     /* The time diffirence for the very first pass. */
     std::chrono::nanoseconds updateTime(0);
 
-    /* Keep updating the physics while the thread is executing. */
+    /* Keep updating while the thread is executing. */
     while(fIsExecuting)
     {
       /* Record the start time. */

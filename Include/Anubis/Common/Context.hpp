@@ -7,6 +7,13 @@ namespace Anubis
 {
   namespace Common
   {
+    /***********************************************************************//**
+     * An asynchronous context class that is used to implement core
+     * functionality in parallel to the main rendering thread. I.e. physics
+     * simulation, sound playback, AI, etc. This class is responsible for
+     * spawining and terminating the respective thread for each. Each
+     * implementation can spawn as many threads as desired.
+     **************************************************************************/
     class Context
     {
       /** Indicate if the thread is running or not. */
