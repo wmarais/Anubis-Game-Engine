@@ -13,8 +13,8 @@ set(AnubisExample_SimpleRendering_HEADERS
 
 include_directories(Include)
 
-add_executable(AnubisExample_SimpleRendering ${AnubisExample_SimpleRendering_SOURCES}
+add_executable(AnubisExample_SimpleRendering
+  ${AnubisExample_SimpleRendering_SOURCES}
   ${AnubisExample_SimpleRendering_HEADERS})
 
-target_link_libraries(AnubisExample_SimpleRendering glfw AnubisGraphics AnubisMath
-  AnubisCommon AnubisPhysics)
+target_link_libraries(AnubisExample_SimpleRendering glfw Anubis)

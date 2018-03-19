@@ -1,6 +1,7 @@
 #ifndef ANUBIS_PHYSICS_PHYSICS_CONTEXT_HPP
 #define ANUBIS_PHYSICS_PHYSICS_CONTEXT_HPP
 
+#include "../Common.hpp"
 #include "Scene.hpp"
 
 namespace Anubis
@@ -14,17 +15,8 @@ namespace Anubis
      * on the back buffer scene and is synced with the front buffer scene
      * when available.
      **************************************************************************/
-    class PhysicsContext
+    class PhysicsContext : public Common::Context
     {
-      /** The tick rate / interval that physics must be updated. */
-      const float kTickRate;
-
-      /** Indicate if the thread is running or not. */
-      std::atomic_bool fIsExecuting;
-
-      /** The exception if one occured during executing of the thread. */
-      std::exception_ptr fException;
-
       /** Mutex to control access to the back scene. */
       std::mutex fFrontSceneMutex;
 
@@ -33,9 +25,6 @@ namespace Anubis
 
       /** The scene object that the AI and Render Queue is calcualte from. */
       std::unique_ptr<Scene> fFrontScene;
-
-      void threadEntry();
-
 
       /*********************************************************************//**
        * Synchronise the front and back scene objects. This function is only
@@ -56,7 +45,10 @@ namespace Anubis
        *
        * @param tickRate
        */
-      PhysicsContext(float tickRate = 1.0f/120.0f);
+      PhysicsContext(const std::chrono::nanoseconds & updateRate =
+          std::chrono::nanoseconds(8333333));
+
+      virtual ~PhysicsContext();
 
     };
   }

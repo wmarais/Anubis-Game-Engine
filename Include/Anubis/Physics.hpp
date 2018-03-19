@@ -6,6 +6,7 @@
 #include "Physics/BoundingSphere.hpp"
 #include "Physics/BoundingVolume.hpp"
 #include "Physics/CameraNode.hpp"
+#include "Physics/PhysicsContext.hpp"
 #include "Physics/Scene.hpp"
 #include "Physics/TaskPool.hpp"
 

@@ -25,6 +25,10 @@ void Scene::syncChildren(const Node * srcParent, Node * dstParent)
 /******************************************************************************/
 void Scene::sync(const Scene * scene)
 {
+  /* If there is no scene, then there is nothing to sync. */
+  if(scene == nullptr)
+    return;
+
   /* Check if the root nodes has the same data. */
   if(fRootNode->fData == scene->fRootNode->fData)
   {

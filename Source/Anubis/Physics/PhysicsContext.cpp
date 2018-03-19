@@ -3,10 +3,17 @@
 using namespace Anubis::Physics;
 
 /******************************************************************************/
-PhysicsContext::PhysicsContext(float tickRate) : kTickRate(tickRate),
-  fIsExecuting(true), fException(nullptr)
+PhysicsContext::PhysicsContext(const std::chrono::nanoseconds & updateRate) :
+  Context(updateRate)
 {
+  /* Create the front scene object. It is expected that the back scene object
+   * will be set by the developer, so do not created it. */
+  fFrontScene = std::make_unique<Scene>();
+}
 
+/******************************************************************************/
+PhysicsContext::~PhysicsContext()
+{
 }
 
 /******************************************************************************/
@@ -34,67 +41,64 @@ bool PhysicsContext::sync()
 }
 
 /******************************************************************************/
-void PhysicsContext::threadEntry()
-{
-  try
-  {
-    /* The start and end time of the updates. */
-    std::chrono::high_resolution_clock::time_point startTime, endTime;
+//void PhysicsContext::threadEntry()
+//{
+//  try
+//  {
+//    /* The time diffirence. */
+//    std::chrono::duration<float> timeDiff(kTickRate);
 
-    /* The time diffirence. */
-    std::chrono::duration<float> timeDiff(kTickRate);
+//    /* Keep updating the physics while the thread is executing. */
+//    while(fIsExecuting)
+//    {
+//      /* Clear the synced flag. */
+//      bool synced = false;
 
-    /* Update the physics scene. */
-    update(timeDiff.count());
+//      /* Record the start time. */
+//      auto startTime = std::chrono::high_resolution_clock::now();
 
-    /* Keep updating the physics while the thread is executing. */
-    while(fIsExecuting)
-    {
-      /* Clear the synced flag. */
-      bool synced = false;
+//      /* Update the physics scene. */
+//      update(timeDiff.count());
 
-      /* Record the start time. */
-      startTime = std::chrono::high_resolution_clock::now();
+//      while(fIsExecuting)
+//      {
+//        /* Check if the tee has been synced. */
+//        if(!synced)
+//        {
+//          /* If not, sync the two scenes. */
+//          synced = sync();
+//        }
 
-      while(1)
-      {
-        /* Check if the tee has been synced. */
-        if(!synced)
-        {
-          /* If not, sync the two scenes. */
-          synced = sync();
-        }
+//        /* Measure the end time. */
+//        auto endTime = std::chrono::high_resolution_clock::now();
 
-        /* Measure the end time. */
-        endTime =  std::chrono::high_resolution_clock::now();
+//        /* Calculate the time diffirence. */
+//        timeDiff = endTime - startTime;
 
-        /* Calculate the time diffirence. */
-        timeDiff = endTime - startTime;
+//        /* Check if the wait time expired and another update should be
+//         * performed.*/
+//        if(timeDiff.count() > kTickRate)
+//        {
+//          break;
+//        }
+//        /* Yield the thread for now. */
+//        else
+//        {
+//          std::this_thread::yield();
+//        }
+//      }
+//    }
+//  }
+//  /* Catch any exceptions that are thrown. */
+//  catch(...)
+//  {
+//    /* Save the exception. */
+//    fException = std::current_exception();
 
-        /* Check if the wait time expired and another update should be
-         * performed.*/
-        if(timeDiff.count() > kTickRate)
-        {
-          break;
-        }
-        /* Yield the thread for now. */
-        else
-        {
-          std::this_thread::yield();
-        }
-      }
-    }
-  }
-  /* Catch any exceptions that are thrown. */
-  catch(...)
-  {
-    /* Save the exception. */
-    fException = std::current_exception();
-
-    /* Stop the thread. */
-    fIsExecuting = false;
-  }
-}
+//    /* Stop the thread. */
+//    fIsExecuting = false;
+//  }
+//}
 
 /******************************************************************************/
 void PhysicsContext::update(float dt)

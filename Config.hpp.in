@@ -14,4 +14,7 @@
  * genrating UUIDs. */
 #cmakedefine ANUBIS_HAS_RPCRT4
 
+/* Indicate if the host OS is windows. */
+#cmakedefine ANUBIS_OS_WINDOWS
+
 #endif /* ANUBIS_CONFIG_HPP */

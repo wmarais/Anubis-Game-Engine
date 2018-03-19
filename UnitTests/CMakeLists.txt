@@ -21,5 +21,4 @@ add_executable(AnubisUnitTest ${AnubisUnitTest_HEADERS}
   ${AnubisUnitTest_SOURCES})
 
 # Link to all the required libraries.
-target_link_libraries(AnubisUnitTest AnubisCommon AnubisPhysics
-  ${GTEST_LIBRARIES})
+target_link_libraries(AnubisUnitTest Anubis ${GTEST_LIBRARIES})

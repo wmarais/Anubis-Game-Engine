@@ -1,6 +1,8 @@
 #ifndef ANUBIS_COMMON_MISC_HPP
 #define ANUBIS_COMMON_MISC_HPP
 
+#include "Config.hpp"
+
 #include <cstdint>
 #include <cassert>
 #include <ostream>
@@ -20,12 +22,43 @@
 #include <mutex>
 #include <atomic>
 #include <thread>
+#include <exception>
 
 //#define ANUBIS_HAS_SSE
 #define ANUBIS_HOST_IS_LITTLE_ENDIAN
 
+#ifdef ANUBIS_OS_WINDOWS
+  #define ANUBIS_DIR_SEPERATOR  '\\'
+#else /* ! ANUBIS_OS_WINDOWS */
+  #define ANUBIS_DIR_SEPERATOR  '/'
+#endif /* ANUBIS_OS_WINDOWS */
+
+
 namespace Anubis
 {
+  namespace Common
+  {
+    class Timer
+    {
+
+    public:
+
+      /*********************************************************************//**
+       * Return the number of nano seconds since the Epoch.
+       *
+       * @return The number of nano seconds sicne the epoch.
+       ************************************************************************/
+      static uint64_t nsSinceEpoch()
+      {
+        /* Get the time since the epoch and convert it into nano seconds. */
+        return std::chrono::duration_cast<std::chrono::nanoseconds>
+                 (std::chrono::system_clock::now().time_since_epoch()).count();
+      }
+
+
+    };
+  }
+
   namespace Math
   {
     class Constants
@@ -97,6 +130,6 @@ namespace Anubis
 //#define ANUBIS_FORCE_INLINE __forceinline
 
 #define ANUBIS_THROW_RUNTIME_EXCEPTION(msg) std::cerr << msg << std::endl; exit(EXIT_FAILURE)
-#define ANUBIS_LOG_WARN(msg)
+//#define ANUBIS_LOG_WARN(msg)
 
 #endif // ANUBIS_COMMON_MISC_HPP

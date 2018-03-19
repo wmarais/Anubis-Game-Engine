@@ -1,6 +1,7 @@
 #ifndef ANUBIS_GRAPHICS_MIXED_ATTRIBUTE_ARRAY_HPP
 #define ANUBIS_GRAPHICS_MIXED_ATTRIBUTE_ARRAY_HPP
 
+#include "../Common.hpp"
 #include "AttributeArray.hpp"
 
 namespace Anubis

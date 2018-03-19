@@ -3,6 +3,7 @@ project(Anubis)
 
 # Set the include directory for the generated config.hpp file.
 include_directories("${CMAKE_BINARY_DIR}/Include/Anubis")
+include_directories("${CMAKE_BINARY_DIR}/Include/Anubis/Common")
 
 # Include optional cmake modules.
 include(TestBigEndian)
@@ -57,6 +58,11 @@ AnubisHasSSE()
 cmake_dependent_option(ANUBIS_ENABLE_SSE "Build with SSE4.1 support."
   ${ANUBIS_SSE_CAN_RUN} "ANUBIS_SSE_CAN_COMPILE" OFF)
 
+# Check the OS.
+if(WIN32)
+  set(ANUBIS_OS_WINDOWS True)
+endif()
+
 ################################################################################
 # CLANG COMPILER OPTIONS
 ################################################################################
@@ -94,27 +100,13 @@ endif()
 ################################################################################
 # MATHS SOURCE CODE
 ################################################################################
-set(AnubisMath_HEADERS
-  Include/Anubis/Math.hpp
-  Include/Anubis/Math/Quaternion.hpp
-  Include/Anubis/Math/Vector2f.hpp
-  Include/Anubis/Math/Vector4f.hpp
-  Include/Anubis/Math/Matrix4f.hpp
-  Include/Anubis/Math/Ray.hpp
-)
-
-set(AnubisMath_SOURCES
-  Source/Anubis/Math/Matrix4f.cpp
-  Source/Anubis/Math/Quaternion.cpp
-  Source/Anubis/Math/Vector4f.cpp
-)
-
 set(AnubisCommon_HEADERS
   Include/Anubis/Common.hpp
   Include/Anubis/Common/Context.hpp
   Include/Anubis/Common/Float.hpp
   Include/Anubis/Common/IdentObj.hpp
   Include/Anubis/Common/Library.hpp
+  Include/Anubis/Common/Log.hpp
   Include/Anubis/Common/Memory.hpp
   Include/Anubis/Common/Misc.hpp
   Include/Anubis/Common/SubObj.hpp
@@ -123,66 +115,88 @@ set(AnubisCommon_HEADERS
 )
 
 set(AnubisCommon_SOURCES
+  Source/Anubis/Common/Context.cpp
   Source/Anubis/Common/Float.cpp
   Source/Anubis/Common/UUID.cpp
 )
 
-set(AnubisGraphics_HEADERS
-  Include/Anubis/Graphics.hpp
-  Include/Anubis/Graphics/AttributeArray.hpp
-  Include/Anubis/Graphics/BufferObject.hpp
-  Include/Anubis/Graphics/Camera.hpp
-  Include/Anubis/Graphics/Colour.hpp
-  Include/Anubis/Graphics/GLState.hpp
-  Include/Anubis/Graphics/LODSet.hpp
-  Include/Anubis/Graphics/MixedAttributeArray.hpp
-  Include/Anubis/Graphics/PixelMap.hpp
-  Include/Anubis/Graphics/Material.hpp
-  Include/Anubis/Graphics/Mesh.hpp
-  Include/Anubis/Graphics/MeshGenerator.hpp
-  Include/Anubis/Graphics/MeshRef.hpp
-  Include/Anubis/Graphics/Renderer.hpp
-  Include/Anubis/Graphics/Shader.hpp
-  Include/Anubis/Graphics/ShaderProgram.hpp
-)
+if(ANUBIS_BUILD_GRAPHICS)
+  set(AnubisGraphics_HEADERS
+    Include/Anubis/Graphics.hpp
+    Include/Anubis/Graphics/AttributeArray.hpp
+    Include/Anubis/Graphics/BufferObject.hpp
+    Include/Anubis/Graphics/Camera.hpp
+    Include/Anubis/Graphics/Colour.hpp
+    Include/Anubis/Graphics/GLState.hpp
+    Include/Anubis/Graphics/LODSet.hpp
+    Include/Anubis/Graphics/MixedAttributeArray.hpp
+    Include/Anubis/Graphics/PixelMap.hpp
+    Include/Anubis/Graphics/Material.hpp
+    Include/Anubis/Graphics/Mesh.hpp
+    Include/Anubis/Graphics/MeshGenerator.hpp
+    Include/Anubis/Graphics/MeshRef.hpp
+    Include/Anubis/Graphics/Renderer.hpp
+    Include/Anubis/Graphics/Shader.hpp
+    Include/Anubis/Graphics/ShaderProgram.hpp
+  )
 
-set(AnubisGraphics_SOURCES
-  Source/Anubis/Graphics/AttributeArray.cpp
-  Source/Anubis/Graphics/BufferObject.cpp
-  Source/Anubis/Graphics/Camera.cpp
-  Source/Anubis/Graphics/Colour.cpp
-  Source/Anubis/Graphics/GLState.cpp
-  Source/Anubis/Graphics/MixedAttributeArray.cpp
-  Source/Anubis/Graphics/PixelMap.cpp
-  Source/Anubis/Graphics/Material.cpp
-  Source/Anubis/Graphics/Mesh.cpp
-  Source/Anubis/Graphics/MeshGenerator.cpp
-  Source/Anubis/Graphics/Renderer.cpp
-  Source/Anubis/Graphics/Shader.cpp
-  Source/Anubis/Graphics/ShaderProgram.cpp
-)
+  set(AnubisGraphics_SOURCES
+    Source/Anubis/Graphics/AttributeArray.cpp
+    Source/Anubis/Graphics/BufferObject.cpp
+    Source/Anubis/Graphics/Camera.cpp
+    Source/Anubis/Graphics/Colour.cpp
+    Source/Anubis/Graphics/GLState.cpp
+    Source/Anubis/Graphics/MixedAttributeArray.cpp
+    Source/Anubis/Graphics/PixelMap.cpp
+    Source/Anubis/Graphics/Material.cpp
+    Source/Anubis/Graphics/Mesh.cpp
+    Source/Anubis/Graphics/MeshGenerator.cpp
+    Source/Anubis/Graphics/Renderer.cpp
+    Source/Anubis/Graphics/Shader.cpp
+    Source/Anubis/Graphics/ShaderProgram.cpp
+  )
+endif()
 
-set(AnubisPhysics_HEADERS
-  Include/Anubis/Physics.hpp
-  Include/Anubis/Physics/BoundingBox.hpp
-  Include/Anubis/Physics/BoundingMesh.hpp
-  Include/Anubis/Physics/BoundingSphere.hpp
-  Include/Anubis/Physics/BoundingVolume.hpp
-  Include/Anubis/Physics/CameraNode.hpp
-  Include/Anubis/Physics/PhysicsContext.hpp
-  Include/Anubis/Physics/Scene.hpp
-  Include/Anubis/Physics/TaskPool.hpp
-)
+if(ANUBIS_BUILD_MATHS)
+  set(AnubisMath_HEADERS
+    Include/Anubis/Math.hpp
+    Include/Anubis/Math/Quaternion.hpp
+    Include/Anubis/Math/Vector2f.hpp
+    Include/Anubis/Math/Vector4f.hpp
+    Include/Anubis/Math/Matrix4f.hpp
+    Include/Anubis/Math/Ray.hpp
+  )
 
-set(AnubisPhysics_SOURCES
-  Source/Anubis/Physics/BoundingBox.cpp
-  Source/Anubis/Physics/BoundingMesh.cpp
-  Source/Anubis/Physics/BoundingSphere.cpp
-  Source/Anubis/Physics/BoundingVolume.cpp
-  Source/Anubis/Physics/PhysicsContext.cpp
-  Source/Anubis/Physics/Scene.cpp
-  Source/Anubis/Physics/TaskPool.cpp
-)
+  set(AnubisMath_SOURCES
+    Source/Anubis/Math/Matrix4f.cpp
+    Source/Anubis/Math/Quaternion.cpp
+    Source/Anubis/Math/Vector4f.cpp
+  )
+endif()
+
+if(ANUBIS_BUILD_PHYSICS)
+  set(AnubisPhysics_HEADERS
+    Include/Anubis/Physics.hpp
+    Include/Anubis/Physics/BoundingBox.hpp
+    Include/Anubis/Physics/BoundingMesh.hpp
+    Include/Anubis/Physics/BoundingSphere.hpp
+    Include/Anubis/Physics/BoundingVolume.hpp
+    Include/Anubis/Physics/CameraNode.hpp
+    Include/Anubis/Physics/PhysicsContext.hpp
+    Include/Anubis/Physics/Scene.hpp
+    Include/Anubis/Physics/TaskPool.hpp
+  )
+
+  set(AnubisPhysics_SOURCES
+    Source/Anubis/Physics/BoundingBox.cpp
+    Source/Anubis/Physics/BoundingMesh.cpp
+    Source/Anubis/Physics/BoundingSphere.cpp
+    Source/Anubis/Physics/BoundingVolume.cpp
+    Source/Anubis/Physics/PhysicsContext.cpp
+    Source/Anubis/Physics/Scene.cpp
+    Source/Anubis/Physics/TaskPool.cpp
+  )
+endif()
 
 ################################################################################
 # GENERATE CONFIG HEADER
@@ -195,25 +209,20 @@ configure_file(Config.hpp.in "Include/Anubis/Common/Config.hpp")
 # Builds the common library.
 add_library(AnubisCommon STATIC ${AnubisCommon_SOURCES} ${AnubisCommon_HEADERS})
 
+
+
+# Build the anubis library.
+add_library(Anubis STATIC ${AnubisCommon_HEADERS}
+                          ${AnubisCommon_SOURCES}
+                          ${AnubisGraphics_HEADERS}
+                          ${AnubisGraphics_SOURCES}
+                          ${AnubisMath_HEADERS}
+                          ${AnubisMath_SOURCES}
+                          ${AnubisPhysics_HEADERS}
+                          ${AnubisPhysics_SOURCES})
+
 if(ANUBIS_HAS_RPCRT4)
-  target_link_libraries(AnubisCommon ${ANUBIS_HAS_RPCRT4})
-endif()
-
-# Build the maths library.
-if(ANUBIS_BUILD_MATHS)
-  add_library(AnubisMath STATIC ${AnubisMath_SOURCES} ${AnubisMath_HEADERS})
-endif()
-
-# Build the graphics library.
-if(ANUBIS_BUILD_GRAPHICS)
-  add_library(AnubisGraphics STATIC ${AnubisGraphics_SOURCES}
-    ${AnubisGraphics_HEADERS})
-endif()
-
-# Build the physics library.
-if(ANUBIS_BUILD_PHYSICS)
-  add_library(AnubisPhysics STATIC ${AnubisPhysics_SOURCES}
-    ${AnubisPhysics_HEADERS})
+  target_link_libraries(Anubis ${ANUBIS_HAS_RPCRT4})
 endif()
 
 # Build the examples.

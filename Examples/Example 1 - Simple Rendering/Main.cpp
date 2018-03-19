@@ -32,6 +32,8 @@ std::unique_ptr<GLState> gGLState;
 /* The library of LODSets. */
 std::unique_ptr<Library<LODSet>> gLODSetLibrary;
 
+
+
 /******************************************************************************/
 void gInitScene()
 {
@@ -92,7 +94,6 @@ void gInitScene()
 /******************************************************************************/
 void gUpdate()
 {
-
 }
 
 /******************************************************************************/
@@ -160,7 +161,12 @@ int main(int argc, char * argv[])
   gladLoadGLLoader((GLADloadproc) glfwGetProcAddress);
 
   /* Disable vsync. */
-  glfwSwapInterval(0);
+  glfwSwapInterval(1);
+
+
+  /* The physics context object. */
+  std::unique_ptr<PhysicsContext> physicsContext =
+      std::make_unique<PhysicsContext>();
 
   /* Initialise the scene. */
   gInitScene();
