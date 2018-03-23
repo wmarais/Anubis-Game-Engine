@@ -49,37 +49,36 @@ namespace Anubis
         ANUBIS_FORCE_INLINE Node(Node * parent = nullptr) :
           fParent(parent) {}
 
+//        /*******************************************************************//**
+//         * Create a scene node with the. Note that the node will not take
+//         * ownership of the parent pointer, but will for all the child pointers.
+//         * This prevent's cycling references but is still safe to use since the
+//         * ownership of the parent node is controlled by the parent's parent.
+//         * Thus unless there is a bug in the tree code, all operations are safe.
+//         *
+//         * @param parent    The parent node of this node.
+//         * @param children  The child nodes of this node. Note that the vector
+//         *                  of children that is passed in will no longer be
+//         *                  valid after this function has been executed.
+//         **********************************************************************/
+//        ANUBIS_FORCE_INLINE Node(Node * parent,
+//          std::vector<std::unique_ptr<Node>> & children) :
+//              fParent(parent)
+//        {
+//          /* Reserve space for all the children. */
+//          fChildren.reserve(children.size());
 
-        /*******************************************************************//**
-         * Create a scene node with the. Note that the node will not take
-         * ownership of the parent pointer, but will for all the child pointers.
-         * This prevent's cycling references but is still safe to use since the
-         * ownership of the parent node is controlled by the parent's parent.
-         * Thus unless there is a bug in the tree code, all operations are safe.
-         *
-         * @param parent    The parent node of this node.
-         * @param children  The child nodes of this node. Note that the vector
-         *                  of children that is passed in will no longer be
-         *                  valid after this function has been executed.
-         **********************************************************************/
-        ANUBIS_FORCE_INLINE Node(Node * parent,
-          std::vector<std::unique_ptr<Node>> & children) :
-              fParent(parent)
-        {
-          /* Reserve space for all the children. */
-          fChildren.reserve(children.size());
+//          /* Iterate through all the children and move the ownership to this
+//           * node. */
+//          for(size_t i = 0; i < children.size(); i++)
+//          {
+//            fChildren.push_back(std::move(children[i]));
+//          }
 
-          /* Iterate through all the children and move the ownership to this
-           * node. */
-          for(size_t i = 0; i < children.size(); i++)
-          {
-            fChildren.push_back(std::move(children[i]));
-          }
-
-          /* Clear the orignal vector since none of the pointers in it will be
-           * valid anymore. */
-          children.clear();
-        }
+//          /* Clear the orignal vector since none of the pointers in it will be
+//           * valid anymore. */
+//          children.clear();
+//        }
 
         /*******************************************************************//**
          * Empty virtual destructor to ensure that any subclass' destrutor will
@@ -96,6 +95,15 @@ namespace Anubis
         ANUBIS_FORCE_INLINE bool isRoot() const
         {
           return fParent == nullptr;
+        }
+
+        ANUBIS_FORCE_INLINE void addChild(std::unique_ptr<Node> & child)
+        {
+          /* Set the parent of the child. */
+          child->fParent = this;
+
+          /* Add the child to this node's children. */
+          fChildren.push_back(std::move(child));
         }
 
         /*******************************************************************//**
@@ -141,11 +149,16 @@ namespace Anubis
 
         /* If it was a remove, this is the node that was removed, if it was an
          * insert, then this is the parent node that was inserted. */
-        Node * fPosition;
+        Common::UUID fID;
 
         /* If it was an insert, then this is the data that was inserted, else
          * nullptr. */
         std::shared_ptr<Common::SubObj> fData;
+
+        ChangeRecord(Types type, const Common::UUID & id,
+                     std::shared_ptr<Common::SubObj> data) : fType(type),
+          fID(id), fData(data) {}
+
       };
 
       /** The history of changes that occured since the last time a sync was
@@ -154,6 +167,9 @@ namespace Anubis
 
     protected:
 
+      /** Indicate if a change histry should be kept. Without it, changes
+       * will not be tracked. */
+      bool fTrackChanges;
 
       /** The root node of the tree. */
       std::unique_ptr<Node> fRootNode;
@@ -171,6 +187,9 @@ namespace Anubis
        *                  too.
        ***********************************************************************/
       void syncChildren(const Node * srcParent, Node *dstParent);
+
+
+      Node * find(const Common::UUID & uuid);
 
     public:
 
@@ -190,16 +209,19 @@ namespace Anubis
        * @param id    The id of the parent node where the new node should be
        *              inserted.
        * @param data  The data to associate with the node.
+       * @return      True if the node was inserted, false if thje parentID
+       *              could not be located and the node was not inserted.
        ************************************************************************/
-      void insert(const Common::UUID & id,
+      bool insert(const Common::UUID & parentID,
                   std::shared_ptr<Common::SubObj> data);
 
       /*********************************************************************//**
-       * Remove the node of the scene graph.
+       * Remove the node identified by the id from the scene graph.
        *
        * @param id  The ID of the node to remove.
+       * @return    True if the node was found and removed, else false.
        ************************************************************************/
-      void remove(const Common::UUID & id);
+      bool remove(const Common::UUID & nodeID);
 
     };
   }

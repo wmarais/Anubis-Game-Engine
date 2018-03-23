@@ -2,7 +2,8 @@
 #define ANUBIS_COMMON_HPP
 
 #include "Common/Config.hpp"
-#include "Common/Context.hpp"
+#include "Common/Barrier.hpp"
+#include "Common/CircularQueue.hpp"
 #include "Common/Float.hpp"
 #include "Common/IdentObj.hpp"
 #include "Common/Library.hpp"
