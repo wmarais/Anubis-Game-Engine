@@ -5,11 +5,13 @@
 #include "../../Include/Anubis/Graphics.hpp"
 #include "../../Include/Anubis/Math.hpp"
 #include "../../Include/Anubis/Physics.hpp"
+#include "../../Include/Anubis/Simulation/Server.hpp"
 
 using namespace Anubis::Common;
 using namespace Anubis::Graphics;
 using namespace Anubis::Math;
 using namespace Anubis::Physics;
+using namespace Anubis::Simulation;
 
 /* The physics scene object. */
 std::unique_ptr<Scene> gScene;
@@ -126,10 +128,20 @@ int main(int argc, char * argv[])
   /* The pointer to the main window. */
   GLFWwindow * window;
 
+  /* Create a simulation. */
+  std::unique_ptr<Server> server = std::make_unique<Server>();
+
+
   /* Set the error callback. */
   glfwSetErrorCallback(gErrorCallback);
 
+
+//  ANUBIS_LOG_INFO("Testing before sleep.");
+//  std::this_thread::sleep_for(std::chrono::seconds(2));
+//  ANUBIS_LOG_INFO("Testing after sleep.");
+
   /* Initialise glfw. */
+  ANUBIS_LOG_INFO("Initialising glfw.");
   if (!glfwInit())
   {
     exit(EXIT_FAILURE);
@@ -165,8 +177,8 @@ int main(int argc, char * argv[])
 
 
   /* The physics context object. */
-  std::unique_ptr<PhysicsContext> physicsContext =
-      std::make_unique<PhysicsContext>();
+  /*std::unique_ptr<PhysicsContext> physicsContext =
+      std::make_unique<PhysicsContext>();*/
 
   /* Initialise the scene. */
   gInitScene();

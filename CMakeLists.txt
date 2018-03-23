@@ -102,7 +102,8 @@ endif()
 ################################################################################
 set(AnubisCommon_HEADERS
   Include/Anubis/Common.hpp
-  Include/Anubis/Common/Context.hpp
+  Include/Anubis/Common/Barrier.hpp
+  Include/Anubis/Common/CircularQueue.hpp
   Include/Anubis/Common/Float.hpp
   Include/Anubis/Common/IdentObj.hpp
   Include/Anubis/Common/Library.hpp
@@ -112,12 +113,25 @@ set(AnubisCommon_HEADERS
   Include/Anubis/Common/SubObj.hpp
   Include/Anubis/Common/System.hpp
   Include/Anubis/Common/UUID.hpp
+
+
+  # The Simulation Files.
+  Include/Anubis/Simulation/Context.hpp
+  Include/Anubis/Simulation/Client.hpp
+  Include/Anubis/Simulation/Server.hpp
 )
 
 set(AnubisCommon_SOURCES
-  Source/Anubis/Common/Context.cpp
+  Source/Anubis/Common/Barrier.cpp
   Source/Anubis/Common/Float.cpp
+  Source/Anubis/Common/Log.cpp
   Source/Anubis/Common/UUID.cpp
+
+
+  # The Simulation Files.
+  Source/Anubis/Simulation/Context.cpp
+  Source/Anubis/Simulation/Client.cpp
+  Source/Anubis/Simulation/Server.cpp
 )
 
 if(ANUBIS_BUILD_GRAPHICS)
