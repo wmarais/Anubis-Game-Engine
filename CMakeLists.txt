@@ -188,6 +188,18 @@ if(ANUBIS_BUILD_MATHS)
   )
 endif()
 
+set(AnubisNetwork_HEADERS
+  Include/Anubis/Network/IPAddress.hpp
+  Include/Anubis/Network/Socket.hpp
+  Include/Anubis/Network/UDPSocket.hpp
+)
+
+set(AnubisNetwork_SOURCES
+  Source/Anubis/Network/IPAddress.cpp
+  Source/Anubis/Network/Socket.cpp
+  Source/Anubis/Network/UDPSocket.cpp
+)
+
 if(ANUBIS_BUILD_PHYSICS)
   set(AnubisPhysics_HEADERS
     Include/Anubis/Physics.hpp
@@ -233,7 +245,9 @@ add_library(Anubis STATIC ${AnubisCommon_HEADERS}
                           ${AnubisMath_HEADERS}
                           ${AnubisMath_SOURCES}
                           ${AnubisPhysics_HEADERS}
-                          ${AnubisPhysics_SOURCES})
+                          ${AnubisPhysics_SOURCES}
+                          ${AnubisNetwork_HEADERS}
+                          ${AnubisNetwork_SOURCES})
 
 if(ANUBIS_HAS_RPCRT4)
   target_link_libraries(Anubis ${ANUBIS_HAS_RPCRT4})
