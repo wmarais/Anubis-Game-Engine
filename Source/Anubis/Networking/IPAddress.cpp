@@ -164,19 +164,8 @@ IPAddress IPAddress::makeIPv6(uint16_t port, const std::string &addr)
   /* Check if an address is specified. */
   if(addr.length())
   {
-    /* Check if it's the IPv6 loopback address. */
-    if(addr == "::1")
-    {
-      /* Copy the global loopback address. */
-       memcpy(sockAddr->sin6_addr.s6_addr, in6addr_loopback.s6_addr,
-              sizeof(in6addr_loopback));
-    }
-    else
-    {
-      /* Set the IPv6 address. */
-      inetPToN6(addr,
-                reinterpret_cast<uint8_t*>(sockAddr->sin6_addr.s6_addr));
-    }
+    /* Set the IPv6 address. */
+    inetPToN6(addr, reinterpret_cast<uint8_t*>(sockAddr->sin6_addr.s6_addr));
   }
 
   /* Return the created address. */

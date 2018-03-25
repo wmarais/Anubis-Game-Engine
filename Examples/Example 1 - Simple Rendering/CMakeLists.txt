@@ -17,4 +17,5 @@ add_executable(AnubisExample_SimpleRendering
   ${AnubisExample_SimpleRendering_SOURCES}
   ${AnubisExample_SimpleRendering_HEADERS})
 
-target_link_libraries(AnubisExample_SimpleRendering glfw Anubis)
+target_link_libraries(AnubisExample_SimpleRendering AnubisSimulation AnubisGraphics AnubisCommon
+  AnubisMaths glfw)

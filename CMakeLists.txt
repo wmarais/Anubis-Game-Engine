@@ -16,6 +16,7 @@ include(HostTests/TestSSE.cmake)
 find_package(Doxygen)
 
 find_library(ANUBIS_HAS_RPCRT4 rpcrt4)
+find_library(ANUBIS_HAS_WINSOCK2 ws2_32)
 
 ################################################################################
 # HOST DETECTION
@@ -30,26 +31,32 @@ endif()
 ################################################################################
 # USER CONFIGURABLE BUILD OPTIONS
 ################################################################################
-# Check if the maths library should be built.
+# Check if the maths library must be built.
 option(ANUBIS_BUILD_MATHS "Build the mathematics library." ON)
 
-# Check if the physics library should be built.
+# Check if the network library must be built.
+option(ANUBIS_BUILD_NETWORKING "Build the networking library." ON)
+
+# Check if the physics library must be built.
 cmake_dependent_option(ANUBIS_BUILD_PHYSICS "Build the physics library." ON
   "ANUBIS_BUILD_MATHS" OFF)
 
-# Check if the graphics library should be built.
+cmake_dependent_option(ANUBIS_BUILD_SIMULATION "Build the simulation library."
+  ON "ANUBIS_BUILD_MATHS" OFF)
+
+# Check if the graphics library must be built.
 cmake_dependent_option(ANUBIS_BUILD_GRAPHICS "Build the graphics library." ON
   "ANUBIS_BUILD_MATHS" OFF)
 
-# Check if the examples should be built.
+# Check if the examples must be built.
 cmake_dependent_option(ANUBIS_BUILD_EXAMPLES "Build the example programs." ON
   "ANUBIS_BUILD_MATHS;ANUBIS_BUILD_PHYSICS;ANUBIS_BUILD_GRAPHICS" OFF)
 
-# Check if the unit tests should be built.
+# Check if the unit tests must be built.
 cmake_dependent_option(ANUBIS_BUILD_UNIT_TESTS "Build the unit tests." ON
   "ANUBIS_BUILD_MATHS;ANUBIS_BUILD_PHYSICS;ANUBIS_BUILD_GRAPHICS" OFF)
 
-# Check if doxygen should be generated.
+# Check if doxygen must be generated.
 cmake_dependent_option(ANUBIS_GENERATE_DOXYGEN "Generate doxygen documentation."
   ON "DOXYGEN_FOUND" OFF)
 
@@ -113,12 +120,6 @@ set(AnubisCommon_HEADERS
   Include/Anubis/Common/SubObj.hpp
   Include/Anubis/Common/System.hpp
   Include/Anubis/Common/UUID.hpp
-
-
-  # The Simulation Files.
-  Include/Anubis/Simulation/Context.hpp
-  Include/Anubis/Simulation/Client.hpp
-  Include/Anubis/Simulation/Server.hpp
 )
 
 set(AnubisCommon_SOURCES
@@ -126,14 +127,24 @@ set(AnubisCommon_SOURCES
   Source/Anubis/Common/Float.cpp
   Source/Anubis/Common/Log.cpp
   Source/Anubis/Common/UUID.cpp
-
-
-  # The Simulation Files.
-  Source/Anubis/Simulation/Context.cpp
-  Source/Anubis/Simulation/Client.cpp
-  Source/Anubis/Simulation/Server.cpp
 )
 
+# The Simulation Library header and source files.
+if(ANUBIS_BUILD_SIMULATION)
+  set(AnubisSimulation_HEADERS
+    Include/Anubis/Simulation/Context.hpp
+    Include/Anubis/Simulation/Client.hpp
+    Include/Anubis/Simulation/Server.hpp
+  )
+
+  set(AnubisSimulation_SOURCES
+    Source/Anubis/Simulation/Context.cpp
+    Source/Anubis/Simulation/Client.cpp
+    Source/Anubis/Simulation/Server.cpp
+  )
+endif()
+
+# The Graphics Library header and source files.
 if(ANUBIS_BUILD_GRAPHICS)
   set(AnubisGraphics_HEADERS
     Include/Anubis/Graphics.hpp
@@ -171,6 +182,7 @@ if(ANUBIS_BUILD_GRAPHICS)
   )
 endif()
 
+# The Mathematics Library header and source files.
 if(ANUBIS_BUILD_MATHS)
   set(AnubisMath_HEADERS
     Include/Anubis/Math.hpp
@@ -188,18 +200,23 @@ if(ANUBIS_BUILD_MATHS)
   )
 endif()
 
-set(AnubisNetwork_HEADERS
-  Include/Anubis/Network/IPAddress.hpp
-  Include/Anubis/Network/Socket.hpp
-  Include/Anubis/Network/UDPSocket.hpp
-)
+# The Network Library header and source files.
+if(ANUBIS_BUILD_NETWORKING)
+  set(AnubisNetwork_HEADERS
+    Include/Anubis/Networking.hpp
+    Include/Anubis/Networking/IPAddress.hpp
+    Include/Anubis/Networking/Socket.hpp
+    Include/Anubis/Networking/UDPSocket.hpp
+  )
 
-set(AnubisNetwork_SOURCES
-  Source/Anubis/Network/IPAddress.cpp
-  Source/Anubis/Network/Socket.cpp
-  Source/Anubis/Network/UDPSocket.cpp
-)
+  set(AnubisNetwork_SOURCES
+    Source/Anubis/Networking/IPAddress.cpp
+    Source/Anubis/Networking/Socket.cpp
+    Source/Anubis/Networking/UDPSocket.cpp
+  )
+endif()
 
+# The Physics Library header and source files.
 if(ANUBIS_BUILD_PHYSICS)
   set(AnubisPhysics_HEADERS
     Include/Anubis/Physics.hpp
@@ -235,27 +252,43 @@ configure_file(Config.hpp.in "Include/Anubis/Common/Config.hpp")
 # Builds the common library.
 add_library(AnubisCommon STATIC ${AnubisCommon_SOURCES} ${AnubisCommon_HEADERS})
 
+if(ANUBIS_BUILD_MATHS)
+  add_library(AnubisMaths STATIC ${AnubisMath_SOURCES} ${AnubisMath_HEADERS})
+endif()
 
+if(ANUBIS_BUILD_PHYSICS)
+  add_library(AnubisPhysics STATIC ${AnubisPhysics_SOURCES}
+    ${AnubisPhysics_HEADERS})
+endif()
 
-# Build the anubis library.
-add_library(Anubis STATIC ${AnubisCommon_HEADERS}
-                          ${AnubisCommon_SOURCES}
-                          ${AnubisGraphics_HEADERS}
-                          ${AnubisGraphics_SOURCES}
-                          ${AnubisMath_HEADERS}
-                          ${AnubisMath_SOURCES}
-                          ${AnubisPhysics_HEADERS}
-                          ${AnubisPhysics_SOURCES}
-                          ${AnubisNetwork_HEADERS}
-                          ${AnubisNetwork_SOURCES})
+if(ANUBIS_BUILD_GRAPHICS)
+  add_library(AnubisGraphics STATIC ${AnubisGraphics_SOURCES}
+    ${AnubisGraphics_HEADERS})
+endif()
+
+if(ANUBIS_BUILD_NETWORKING)
+  add_library(AnubisNetwork STATIC ${AnubisNetwork_SOURCES}
+    ${AnubisNetwork_HEADERS})
+
+  if(ANUBIS_HAS_WINSOCK2)
+    target_link_libraries(AnubisNetwork ${ANUBIS_HAS_WINSOCK2})
+  endif()
+endif()
+
+if(ANUBIS_BUILD_SIMULATION)
+  add_library(AnubisSimulation STATIC ${AnubisSimulation_SOURCES}
+    ${AnubisSimulation_HEADERS})
+endif()
+
 
 if(ANUBIS_HAS_RPCRT4)
-  target_link_libraries(Anubis ${ANUBIS_HAS_RPCRT4})
+  target_link_libraries(AnubisCommon ${ANUBIS_HAS_RPCRT4})
 endif()
 
 # Build the examples.
 if(ANUBIS_BUILD_EXAMPLES)
   add_subdirectory("Examples/Example 1 - Simple Rendering")
+  add_subdirectory("Examples/Example 2  - TCP Chat")
 endif()
 
 # Build the unit tests.
