@@ -135,9 +135,6 @@ namespace Anubis
       /** Flag to track if the thread should keep runing. */
       std::atomic_bool fIsExecuting;
 
-      /** The mutex to control access to the message queue. */
-      std::mutex fMsgMutex;
-
       /** The mutex to indicate that no messages are ready. */
       std::mutex fMsgReadyMutex;
 

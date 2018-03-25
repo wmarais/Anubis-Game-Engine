@@ -5,7 +5,7 @@
 
 namespace Anubis
 {
-  namespace Network
+  namespace Networking
   {
     class IPAddress
     {

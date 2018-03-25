@@ -6,7 +6,7 @@
 
 namespace Anubis
 {
-  namespace Network
+  namespace Networking
   {
     /***********************************************************************//**
      * A wrapper class around the sockets() layer to abstract away Winsock and

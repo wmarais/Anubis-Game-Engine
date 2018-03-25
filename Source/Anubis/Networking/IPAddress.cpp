@@ -1,7 +1,7 @@
 #include "../../../Include/Anubis/Common/System.hpp"
-#include "../../../Include/Anubis/Network/IPAddress.hpp"
+#include "../../../Include/Anubis/Networking/IPAddress.hpp"
 
-using namespace Anubis::Network;
+using namespace Anubis::Networking;
 
 /******************************************************************************/
 IPAddress::IPAddress() : fData(nullptr), fDataLen(0)

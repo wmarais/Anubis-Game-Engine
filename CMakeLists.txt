@@ -206,13 +206,15 @@ if(ANUBIS_BUILD_NETWORKING)
     Include/Anubis/Networking.hpp
     Include/Anubis/Networking/IPAddress.hpp
     Include/Anubis/Networking/Socket.hpp
-    Include/Anubis/Networking/UDPSocket.hpp
+    Include/Anubis/Networking/TCPServer.hpp
+    Include/Anubis/Networking/UDPServer.hpp
   )
 
   set(AnubisNetwork_SOURCES
     Source/Anubis/Networking/IPAddress.cpp
     Source/Anubis/Networking/Socket.cpp
-    Source/Anubis/Networking/UDPSocket.cpp
+    Source/Anubis/Networking/TCPServer.cpp
+    Source/Anubis/Networking/UDPServer.cpp
   )
 endif()
 

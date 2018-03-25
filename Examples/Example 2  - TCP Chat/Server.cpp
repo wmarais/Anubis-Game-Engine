@@ -2,7 +2,7 @@
 #include "../../Include/Anubis/Networking.hpp"
 
 using namespace Anubis;
-using namespace Anubis::Network;
+using namespace Anubis::Networking;
 
 
 void gListenThreadFunc()

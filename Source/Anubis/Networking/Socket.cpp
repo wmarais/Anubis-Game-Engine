@@ -1,10 +1,10 @@
 #include "../../../Include/Anubis/Common/System.hpp"
-#include "../../../Include/Anubis/Network/Socket.hpp"
+#include "../../../Include/Anubis/Networking/Socket.hpp"
 
-using namespace Anubis::Network;
+using namespace Anubis::Networking;
 
 /******************************************************************************/
-struct Anubis::Network::Socket::Data
+struct Anubis::Networking::Socket::Data
 {
   /* Lock to control access to the WSAStartup function. I'm not sure if this is
    * required but there seems to be no explicit statement about thread safety,

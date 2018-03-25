@@ -41,9 +41,6 @@ void Log::threadEntry()
   /* Keep looping while executing. */
   while(fIsExecuting)
   {
-    /* Lock the access mutex. */
-    fMsgMutex.lock();
-
     /* Check if the queue is empty. */
     if(fMessages.isEmpty())
     {
@@ -56,14 +53,8 @@ void Log::threadEntry()
         /* Lock the waiting for message mutex. */
         std::unique_lock<std::mutex> lock(fMsgReadyMutex);
 
-        /* Unlock the access mutex. */
-        fMsgMutex.unlock();
-
         /* Wait for 100ms. */
         result = fMsgReadyCV.wait_for(lock, milliseconds(100));
-
-        /* Lock the mutex again. */
-        fMsgMutex.lock();
       }
     }
 
@@ -78,13 +69,7 @@ void Log::threadEntry()
             << curMsg.fMessage << std::endl;
       }
     }
-
-    /* Unlock the mutex some the main thread can do stuff. */
-    fMsgMutex.unlock();
   }
-
-  /* Lock the access mutex. */
-  std::lock_guard<std::mutex> lock(fMsgMutex);
 
   /* Flush the remaining messages. */
   while(fMessages.pop(curMsg))
@@ -115,9 +100,6 @@ void Log::write(Levels level, const std::string & msg)
     /* Nothing left to do. */
     return;
   }
-
-  /* Lock the access mutex. */
-  std::lock_guard<std::mutex> lock(fMsgMutex);
 
   /* Push the message on the queue. */
   fMessages.push(Entry(level, msg));
