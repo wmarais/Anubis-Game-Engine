@@ -128,7 +128,7 @@ Socket::~Socket()
 }
 
 /******************************************************************************/
-void Socket::bind(const IPAddress &addr)
+void Socket::bind(const IPEndPoint &addr)
 {
   /* Check the bind result. */
   if(::bind(fData->fHandle, reinterpret_cast<const sockaddr*>(addr.data()),
@@ -189,7 +189,7 @@ std::unique_ptr<Socket> Socket::listen(size_t backlog)
 }
 
 /******************************************************************************/
-bool Socket::connect(const IPAddress & addr)
+bool Socket::connect(const IPEndPoint & addr)
 {
   ANUBIS_LOG_DEBUG("Attempting to connect to server.");
   if(::connect(fData->fHandle,
@@ -258,7 +258,7 @@ void Socket::recv(std::vector<uint8_t> & data, size_t len)
 }
 
 /******************************************************************************/
-void Socket::sendTo(const IPAddress & addr, const std::vector<uint8_t> & data)
+void Socket::sendTo(const IPEndPoint & addr, const std::vector<uint8_t> & data)
 {
   /* The number of bytes that were sent. */
   size_t bytesSent = 0;
@@ -288,7 +288,7 @@ void Socket::sendTo(const IPAddress & addr, const std::vector<uint8_t> & data)
 }
 
 /******************************************************************************/
-void Socket::recvFrom(IPAddress & addr, std::vector<uint8_t> & data,
+void Socket::recvFrom(IPEndPoint & addr, std::vector<uint8_t> & data,
                       size_t len)
 {
   /* Resize the buffer based on what was expected to be read. */

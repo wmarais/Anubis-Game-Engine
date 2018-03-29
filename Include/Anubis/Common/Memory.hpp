@@ -42,6 +42,28 @@ namespace Anubis
       /** The memory alignment to use for GPU data. */
       static const size_t kGPUAlignment = 4;
 
+      template <typename T>
+      ANUBIS_INLINE T rangeEnd(T start, T end)
+      {
+        /* The current iterator used for searching. */
+        T cur = start;
+
+        /* Search for the end of range. */
+        for(; cur != end && *cur == *start; cur++);
+
+        /* Return the end of range. */
+        return cur;
+      }
+
+      template <typename S, typename T>
+      ANUBIS_INLINE std::pair<S,S> longestEqualRange(S start, S end, T value)
+      {
+        /* The start of the search. */
+
+      }
+
+
+
       ANUBIS_FORCE_INLINE static void * alignedAlloc(size_t size, size_t align)
       {
         return __mingw_aligned_malloc(size, align);
@@ -50,6 +72,31 @@ namespace Anubis
       ANUBIS_FORCE_INLINE static void alignedFree(void * ptr)
       {
         __mingw_aligned_free(ptr);
+      }
+
+      /*********************************************************************//**
+       * Read a value from a byte buffer which is organised in big endian
+       * byte order and translate it to the host's byte order.
+       */
+      template <typename T> ANUBIS_FORCE_INLINE static T fromBigEndian(
+          const uint8_t * buffer, size_t buffLen, size_t index = 0)
+      {
+        /* The value to be returned. */
+        T value;
+
+        #ifdef ANUBIS_HOST_IS_LITTLE_ENDIAN
+          for(size_t i = 0; i < sizeof(T); i++)
+          {
+            /* Shift the data by one byte. */
+            value <<= 8;
+
+            /* Or in the new value. */
+            value |= buffer[index + i];
+          }
+        #endif /* ANUBIS_HOST_IS_LITTLE_ENDIAN */
+
+        /* Return the value in the host byte order. */
+        return value;
       }
 
       /***********************************************************************//**

@@ -1,5 +1,5 @@
-#ifndef ANUBIS_NETWORK_IP_ADDRESS_HPP
-#define ANUBIS_NETWORK_IP_ADDRESS_HPP
+#ifndef ANUBIS_NETWORK_IP_END_POINT_HPP
+#define ANUBIS_NETWORK_IP_END_POINT_HPP
 
 #include "../Common.hpp"
 
@@ -7,7 +7,7 @@ namespace Anubis
 {
   namespace Networking
   {
-    class IPAddress
+    class IPEndPoint
     {
       /** The number of octets in an IPv4 Address. */
       static const size_t kIPv4OctetCount = 4;
@@ -25,9 +25,6 @@ namespace Anubis
 
       /** The length of the data. */
       size_t fDataLen;
-
-      template<typename T> static void split(const std::string & str,
-                                             char delim, T result);
 
       static std::vector<std::string> split(const std::string & str,
                                             char delim);
@@ -54,9 +51,27 @@ namespace Anubis
                             uint8_t dst[kIPv6OctetCount]);
 
     public:
+      enum class Preference : int
+      {
+        /** Only use IPv4 addresses. */
+        IPv4Only,
 
-      IPAddress();
-      IPAddress(const IPAddress & cp);
+        /** Only use IPv6 addresses. */
+        IPv6Only,
+
+        /** Prefer IPv4, but use IPv6 if necisary. */
+        IPv4,
+
+        /** Prefer IPv6, but use IPv4 if necisary. */
+        IPv6,
+
+        /** Use the first valid address. */
+        Any
+      };
+
+      IPEndPoint();
+      IPEndPoint(const IPEndPoint & cp);
+      ~IPEndPoint();
 
       /*********************************************************************//**
        * Create an IPv4 Address from the supplied port and address. If the addr
@@ -66,7 +81,7 @@ namespace Anubis
        * @param addr  The IP address to use.
        * @return      The IPAddress object that was created.
        ************************************************************************/
-      static IPAddress makeIPv4(uint16_t port, const std::string & addr = "");
+      static IPEndPoint makeIPv4(uint16_t port, const std::string & addr = "");
 
       /*********************************************************************//**
        * Create an IPv6 Address from the supplied port and address. If the addr
@@ -76,9 +91,27 @@ namespace Anubis
        * @param addr  The IP address to use.
        * @return      The IPAddress object that was created.
        ************************************************************************/
-      static IPAddress makeIPv6(uint16_t port, const std::string & addr = "");
+      static IPEndPoint makeIPv6(uint16_t port, const std::string & addr = "");
 
-      IPAddress & operator = (const IPAddress & rhs);
+      /*********************************************************************//**
+       * Create an IP address object from the specified port and node name.
+       *
+       * The nodeName parameter can be and IPv4 address, an IPv6 address or an
+       * DNS name. If an IPv4 or IPv6 address is specified, make sure to set
+       * the pref parameter appropriately, specifically dont set and IPv4
+       * nodeName and the preference to IPv6Only since this will cause an
+       * exception, and visa versa.
+       *
+       * @param port      The port to bind or connect too.
+       * @param nodeName  The DNS name, IPv4 or IPv6 address of the node.
+       * @param pref      The preffered IP version.
+       * @return          The created IP address object.
+       ************************************************************************/
+      static IPEndPoint makeIPAddr(uint16_t port,
+                                  const std::string & nodeName = "",
+                                  Preference pref = Preference::Any);
+
+      IPEndPoint & operator = (const IPEndPoint & rhs);
 
       ANUBIS_INLINE const uint8_t * data() const
       {
@@ -94,8 +127,17 @@ namespace Anubis
       {
         return fDataLen;
       }
+
+      bool isIPv4() const;
+
+      bool isIPv6() const;
+
+      std::string ipStr() const;
     };
   }
 }
 
-#endif /* ANUBIS_NETWORK_IP_ADDRESS_HPP */
+std::ostream & operator << (std::ostream & os,
+                            const Anubis::Networking::IPEndPoint & ipAddr);
+
+#endif /* ANUBIS_NETWORK_IP_END_POINT_HPP */

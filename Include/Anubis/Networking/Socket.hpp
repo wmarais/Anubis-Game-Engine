@@ -2,7 +2,7 @@
 #define ANUBIS_NETWORK_SOCKET_HPP
 
 #include "../Common.hpp"
-#include "IPAddress.hpp"
+#include "IPEndPoint.hpp"
 
 namespace Anubis
 {
@@ -22,7 +22,7 @@ namespace Anubis
       std::unique_ptr<Data> fData;
 
       /** The Address of this Socket. */
-      IPAddress fAddress;
+      IPEndPoint fAddress;
     public:
 
       /** The list of supported Socket Types. */
@@ -67,7 +67,7 @@ namespace Anubis
        * @param port  The local port to bind too.
        * @param iface The local interface to bind too.
        ************************************************************************/
-      void bind(const IPAddress & addr);
+      void bind(const IPEndPoint & addr);
 
       /*********************************************************************//**
        * Listen for a client trying to connect. This is used by TCP servers to
@@ -82,15 +82,15 @@ namespace Anubis
        * @brief connect
        * @param addr
        ************************************************************************/
-      bool connect(const IPAddress & addr);
+      bool connect(const IPEndPoint & addr);
 
       void send(const std::vector<uint8_t> & data);
 
       void recv(std::vector<uint8_t> & data, size_t len);
 
-      void sendTo(const IPAddress & addr, const std::vector<uint8_t> & data);
+      void sendTo(const IPEndPoint & addr, const std::vector<uint8_t> & data);
 
-      void recvFrom(IPAddress &addr, std::vector<uint8_t> & data,
+      void recvFrom(IPEndPoint &addr, std::vector<uint8_t> & data,
                     size_t len);
 
 

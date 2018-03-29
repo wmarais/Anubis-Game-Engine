@@ -204,14 +204,14 @@ endif()
 if(ANUBIS_BUILD_NETWORKING)
   set(AnubisNetwork_HEADERS
     Include/Anubis/Networking.hpp
-    Include/Anubis/Networking/IPAddress.hpp
+    Include/Anubis/Networking/IPEndPoint.hpp
     Include/Anubis/Networking/Socket.hpp
     Include/Anubis/Networking/TCPServer.hpp
     Include/Anubis/Networking/UDPServer.hpp
   )
 
   set(AnubisNetwork_SOURCES
-    Source/Anubis/Networking/IPAddress.cpp
+    Source/Anubis/Networking/IPEndPoint.cpp
     Source/Anubis/Networking/Socket.cpp
     Source/Anubis/Networking/TCPServer.cpp
     Source/Anubis/Networking/UDPServer.cpp
