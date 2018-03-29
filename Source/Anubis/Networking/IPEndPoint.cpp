@@ -12,6 +12,132 @@ IPEndPoint::IPEndPoint() : fData(nullptr), fDataLen(0)
 }
 
 /******************************************************************************/
+IPEndPoint::IPEndPoint(uint16_t port, const std::string & nodeName,
+                       Preferences pref)
+{
+  WSADATA wsa;
+  WSAStartup(MAKEWORD(2,2), &wsa);
+
+  /* The hints to pass for address information lookup. */
+  struct addrinfo hints;
+
+  /* The result from the address info lookup. */
+  struct addrinfo *result = nullptr;
+
+  /* Clear the hints object. */
+  memset(&hints, 0, sizeof(struct addrinfo));
+
+  /* Set the appropriate hints. */
+  hints.ai_family = AF_UNSPEC;
+
+  /* Retrieve the address list. */
+  int ret = getaddrinfo(nodeName.c_str(), nullptr, &hints, &result);
+
+  /* Check if the operation failed. */
+  if(ret != 0)
+  {
+    ANUBIS_THROW_RUNTIME_EXCEPTION("getaddrinfo() failed with error: " <<
+                                   ret);
+  }
+
+  /* The first IPv4 address that was found. */
+  struct addrinfo * addrInfoIPv4 = nullptr;
+
+  /* The first IPv6 address that was found. */
+  struct addrinfo * addrInfoIPv6 = nullptr;
+
+  /* Iterate through the linked list of results until both an IPv4 and IPV6
+   * dress has been found or we run out of results. */
+  for(struct addrinfo * curResult = result;
+      curResult && (!addrInfoIPv4 || !addrInfoIPv6);
+      curResult = curResult->ai_next)
+  {
+    /* Check if any IPv4 address has been found. */
+    if(curResult->ai_family == AF_INET)
+    {
+      /* Set the first IPv4 address. */
+      if(!addrInfoIPv4)
+      {
+        addrInfoIPv4 = curResult;
+      }
+    }
+    else if(curResult->ai_family == AF_INET6)
+    {
+      /* Set the first IPv6 address. */
+      if(!addrInfoIPv6)
+      {
+        addrInfoIPv6 = curResult;
+      }
+    }
+  }
+
+  /* The best address to use. */
+  struct addrinfo * bestAdrInfo = nullptr;
+
+  /* The address family to use. */
+  uint16_t family;
+
+  /* Check if there is IPv4 data. */
+  if(addrInfoIPv4)
+  {
+    /* Check if an IPv4 address is adequate. */
+    if(pref == Preferences::IPv4Only || pref == Preferences::IPv4 ||
+       pref == Preferences::Any)
+    {
+      family = AF_INET;
+      bestAdrInfo = addrInfoIPv4;
+    }
+  }
+
+  /* Check if there is IPv6 data. */
+  if(addrInfoIPv6)
+  {
+    /* Check if an IPv6 address is adequated. */
+    if(!bestAdrInfo &&
+       (pref == Preferences::IPv6Only || pref == Preferences::IPv6 ||
+        pref == Preferences::IPv4 || pref == Preferences::Any))
+    {
+      family = AF_INET6;
+      bestAdrInfo = addrInfoIPv6;
+    }
+  }
+  /* Check if an IPv4 address can be used instead of an IPv6 address. */
+  else if(!bestAdrInfo && pref != Preferences::IPv6Only)
+  {
+    family = AF_INET;
+    bestAdrInfo = addrInfoIPv4;
+  }
+
+  /* Check if an address was found. */
+  if(bestAdrInfo != nullptr)
+  {
+    /* Create the data for the address. */
+    fDataLen = bestAdrInfo->ai_addrlen;
+    fData = std::unique_ptr<uint8_t[]>(new uint8_t[fDataLen]);
+
+    /* Copy the address. */
+    memcpy(fData.get(), bestAdrInfo->ai_addr, fDataLen);
+
+    /* Set the address family / protocol version. */
+    *reinterpret_cast<uint16_t*>(fData.get()) = htons(family);
+
+    /* Set the port number. */
+    *reinterpret_cast<uint16_t*>(fData.get() + sizeof(uint16_t))
+        = htons(port);
+  }
+
+  /* Free the queue. */
+  freeaddrinfo(result);
+
+  /* Check if any results were found. */
+  if(bestAdrInfo == nullptr)
+  {
+    ANUBIS_THROW_RUNTIME_EXCEPTION("Unable to find a suitable IP Address "
+      "for node name: " << nodeName);
+  }
+}
+
+/******************************************************************************/
 IPEndPoint::IPEndPoint(const IPEndPoint & cp)
 {
   WSADATA wsa;
@@ -28,6 +154,7 @@ IPEndPoint::IPEndPoint(const IPEndPoint & cp)
   memcpy(fData.get(), cp.fData.get(), fDataLen);
 }
 
+/******************************************************************************/
 IPEndPoint::~IPEndPoint()
 {
   WSACleanup();
@@ -202,89 +329,6 @@ IPEndPoint IPEndPoint::makeIPv6(uint16_t port, const std::string &addr)
   }
 
   /* Return the created address. */
-  return ipAddr;
-}
-
-/******************************************************************************/
-IPEndPoint IPEndPoint::makeIPAddr(uint16_t port, const std::string & nodeName,
-                                Preference pref)
-{
-  struct addrinfo hints;
-  struct addrinfo *result = nullptr;
-
-  /* The IPAddress object that will be returned. */
-  IPEndPoint ipAddr;
-
-  /* Clear the hints object. */
-  memset(&hints, 0, sizeof(struct addrinfo));
-
-  /* Set the appropriate hints. */
-  hints.ai_family = AF_UNSPEC;
-
-  /* Retrieve the address list. */
-  int ret = getaddrinfo(nodeName.c_str(), nullptr, &hints, &result);
-
-  /* Check if the operation failed. */
-  if(ret != 0)
-  {
-    ANUBIS_THROW_RUNTIME_EXCEPTION("getaddrinfo() failed with error: " <<
-                                   ret);
-  }
-
-  struct addrinfo * bestAdrInfo = nullptr;
-  uint16_t family;
-
-  /* Iterate through the linked list of results until both an IPv4 and IPV6
-   * dress has been found or we run out of results. */
-  for(struct addrinfo * curResult = result;
-      curResult != nullptr && bestAdrInfo == nullptr;
-      curResult = curResult->ai_next)
-  {
-    /* Check if any IPv4 address has been found. */
-    if(curResult->ai_family == AF_INET && (pref == Preference::Any ||
-       pref == Preference::IPv4 || pref == Preference::IPv4Only))
-    {
-      bestAdrInfo = curResult;
-      family = AF_INET;
-    }
-    /* Else check if an IPv6 address has been found. */
-    else if(curResult->ai_family == AF_INET6 && (pref == Preference::Any ||
-      pref == Preference::IPv6 || pref == Preference::IPv6Only))
-    {
-      bestAdrInfo = curResult;
-      family = AF_INET6;
-    }
-  }
-
-  /* Check if an address was found. */
-  if(bestAdrInfo != nullptr)
-  {
-    /* Create the data for the address. */
-    ipAddr.fDataLen = bestAdrInfo->ai_addrlen;
-    ipAddr.fData = std::unique_ptr<uint8_t[]>(new uint8_t[ipAddr.fDataLen]);
-
-    /* Copy the address. */
-    memcpy(ipAddr.fData.get(), bestAdrInfo->ai_addr, ipAddr.fDataLen);
-
-    /* Set the address family / protocol version. */
-    *reinterpret_cast<uint16_t*>(ipAddr.fData.get()) = htons(family);
-
-    /* Set the port number. */
-    *reinterpret_cast<uint16_t*>(ipAddr.fData.get() + sizeof(uint16_t))
-        = htons(port);
-  }
-
-  /* Free the queue. */
-  freeaddrinfo(result);
-
-  /* Check if any results were found. */
-  if(bestAdrInfo == nullptr)
-  {
-    ANUBIS_THROW_RUNTIME_EXCEPTION("Unable to find a suitable IP Address "
-      "for node name: " << nodeName);
-  }
-
-  /* Return the IP Address. */
   return ipAddr;
 }
 

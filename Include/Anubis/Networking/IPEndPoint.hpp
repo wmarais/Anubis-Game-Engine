@@ -51,7 +51,7 @@ namespace Anubis
                             uint8_t dst[kIPv6OctetCount]);
 
     public:
-      enum class Preference : int
+      enum class Preferences : int
       {
         /** Only use IPv4 addresses. */
         IPv4Only,
@@ -70,6 +70,25 @@ namespace Anubis
       };
 
       IPEndPoint();
+
+      /*********************************************************************//**
+       * Create an IP address object from the specified port and node name.
+       *
+       * The nodeName parameter can be and IPv4 address, an IPv6 address or an
+       * DNS name. If an IPv4 or IPv6 address is specified, make sure to set
+       * the pref parameter appropriately, specifically don't set and IPv4
+       * nodeName and the preference to IPv6Only since this will cause an
+       * exception, and visa-versa.
+       *
+       * @param port      The port to bind or connect too.
+       * @param nodeName  The DNS name, IPv4 or IPv6 address of the node.
+       * @param pref      The preffered IP version.
+       * @return          The created IP address object.
+       ************************************************************************/
+      IPEndPoint(uint16_t port,
+                 const std::string & nodeName = "",
+                 Preferences pref = Preferences::Any);
+
       IPEndPoint(const IPEndPoint & cp);
       ~IPEndPoint();
 
@@ -93,23 +112,6 @@ namespace Anubis
        ************************************************************************/
       static IPEndPoint makeIPv6(uint16_t port, const std::string & addr = "");
 
-      /*********************************************************************//**
-       * Create an IP address object from the specified port and node name.
-       *
-       * The nodeName parameter can be and IPv4 address, an IPv6 address or an
-       * DNS name. If an IPv4 or IPv6 address is specified, make sure to set
-       * the pref parameter appropriately, specifically dont set and IPv4
-       * nodeName and the preference to IPv6Only since this will cause an
-       * exception, and visa versa.
-       *
-       * @param port      The port to bind or connect too.
-       * @param nodeName  The DNS name, IPv4 or IPv6 address of the node.
-       * @param pref      The preffered IP version.
-       * @return          The created IP address object.
-       ************************************************************************/
-      static IPEndPoint makeIPAddr(uint16_t port,
-                                  const std::string & nodeName = "",
-                                  Preference pref = Preference::Any);
 
       IPEndPoint & operator = (const IPEndPoint & rhs);
 
