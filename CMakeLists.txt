@@ -292,7 +292,7 @@ endif()
 # Build the examples.
 if(ANUBIS_BUILD_EXAMPLES)
   add_subdirectory("Examples/Example 1 - Simple Rendering")
-  add_subdirectory("Examples/Example 2  - TCP Chat")
+  add_subdirectory("Examples/Example 2  - Simple TCP Comms")
 endif()
 
 # Build the unit tests.

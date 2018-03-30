@@ -6,7 +6,7 @@ using namespace Anubis::Common;
 Log Log::fInstance;
 
 /******************************************************************************/
-Log::Log() : fMaxLevel(Levels::Info), fWriteToCLI(true), fIsExecuting(true)
+Log::Log() : fMaxLevel(Levels::Debug), fWriteToCLI(true), fIsExecuting(true)
 {
   /* Start the writer thread. */
   fThread = std::thread(&Log::threadEntry, this);

@@ -9,7 +9,7 @@ TCPServer::TCPServer(IPEndPoint localEP) :
   try
   {
     /* Create the listen socket. */
-    fListenSocket = std::make_unique<Socket>(Socket::Types::TCP, localEP);
+    fListenSocket = std::make_unique<Socket>(Socket::Types::TCP);
 
     /* Create the thread to listen for new connections. */
     fThread = std::thread(&TCPServer::listenThread, this);

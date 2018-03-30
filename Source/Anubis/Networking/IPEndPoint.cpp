@@ -38,6 +38,7 @@ struct Anubis::Networking::IPEndPoint::Data final
 
   /*************************************************************************//**
    * Build the the endpoint data for an IPv4 address.
+   *
    * @param src   The address structur from which to copy the IPv4 address.
    * @param port  The port number to use for the end point.
    ****************************************************************************/
@@ -119,7 +120,7 @@ void IPEndPoint::Data::buildV4Addr(const sockaddr_in * src, uint16_t port)
   dst->sin_port = htons(port);
 
   /* Set the address family. */
-  dst->sin_family = htons(AF_INET);
+  dst->sin_family = AF_INET;
 }
 
 /******************************************************************************/
@@ -145,7 +146,7 @@ void IPEndPoint::Data::buildV6Addr(const sockaddr_in6 * src, uint16_t port)
   dst->sin6_port = htons(port);
 
   /* Set the address family. */
-  dst->sin6_family = htons(AF_INET6);
+  dst->sin6_family = AF_INET6;
 }
 
 /******************************************************************************/
@@ -175,6 +176,19 @@ struct addrinfo * IPEndPoint::Data::getAddrInfo(const std::string & nodeName)
 
   /* Return the results pointer. */
   return result;
+}
+
+/******************************************************************************/
+IPEndPoint::IPEndPoint(void * addrData, size_t dataLen)
+{
+  /* Create the data object. */
+  fData = std::make_unique<Data>();
+
+  /* Create the memory for the addr data. */
+  fData->fAddrData = std::unique_ptr<uint8_t[]>(new uint8_t[dataLen]);
+
+  /* Copy the address data. */
+  memcpy(fData->fAddrData.get(), addrData, dataLen);
 }
 
 /******************************************************************************/

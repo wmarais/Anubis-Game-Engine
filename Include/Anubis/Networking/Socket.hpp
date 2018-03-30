@@ -21,8 +21,9 @@ namespace Anubis
       /** The instance of the platform specific data. */
       std::unique_ptr<Data> fData;
 
-      /** The Address of this Socket. */
-      IPEndPoint fLocalEP;
+
+      Socket(std::unique_ptr<Data> & data);
+
     public:
 
       /** The list of supported Socket Types. */
@@ -35,15 +36,22 @@ namespace Anubis
         TCP
       };
 
-      Socket(std::unique_ptr<Data> & data);
+      enum class Versions : int
+      {
+        IPv4  = 4,
+        IPv6  = 6
+      };
 
       /*********************************************************************//**
-       * Create a socket using the specified socket type and IP version.
+       * Create a socket using the specified socket type and IP version. If
+       * useIPv4 == true, then an IPv4 socket is created, if useIPv4 == false,
+       * then an IPv6 socket is created.
        *
        * @param type    The type of packets / flow control to use.
-       * @param version The IP protocol version to use. The defual is IPv4.
+       * @param useIPv4 Specify if IPv4 must be used (true), else specify that
+       *                IPv6 must be used (false).
        ************************************************************************/
-      Socket(Types type, const IPEndPoint & localEP = IPEndPoint(0, ""));
+      Socket(Types type, Versions version = Versions::IPv4);
 
       /*********************************************************************//**
        * Destroy the allocated data and close the socket.
@@ -57,7 +65,9 @@ namespace Anubis
        * @param port  The local port to bind too.
        * @param iface The local interface to bind too.
        ************************************************************************/
-      void bind(const IPEndPoint & localEP);
+      void bind(const IPEndPoint & ep);
+
+      IPEndPoint getEP() const;
 
       /*********************************************************************//**
        * Listen for a client trying to connect. This is used by TCP servers to
@@ -72,15 +82,17 @@ namespace Anubis
        * @brief connect
        * @param addr
        ************************************************************************/
-      bool connect(const IPEndPoint & addr);
+      bool connect(const IPEndPoint & ep);
 
-      void send(const std::vector<uint8_t> & data);
+      void shutdown();
 
-      void recv(std::vector<uint8_t> & data, size_t len);
+      bool send(const std::vector<uint8_t> & data);
 
-      void sendTo(const IPEndPoint & addr, const std::vector<uint8_t> & data);
+      bool recv(std::vector<uint8_t> & data, size_t len);
 
-      void recvFrom(IPEndPoint &addr, std::vector<uint8_t> & data,
+      void sendTo(const IPEndPoint & ep, const std::vector<uint8_t> & data);
+
+      void recvFrom(IPEndPoint & ep, std::vector<uint8_t> & data,
                     size_t len);
 
 

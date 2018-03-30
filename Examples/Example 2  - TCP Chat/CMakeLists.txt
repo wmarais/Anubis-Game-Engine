@@ -1,5 +1,0 @@
-add_executable(AnubisExample_TCPChatServer Server.cpp)
-add_executable(AnubisExample_TCPChatClient Client.cpp)
-
-target_link_libraries(AnubisExample_TCPChatServer AnubisNetwork AnubisCommon)
-target_link_libraries(AnubisExample_TCPChatClient AnubisNetwork AnubisCommon)

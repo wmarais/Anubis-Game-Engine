@@ -53,6 +53,8 @@ namespace Anubis
        ************************************************************************/
       const size_t addrDataLen() const;
 
+      IPEndPoint(void * addrData, size_t dataLen);
+
     public:
       enum class Preferences : int
       {

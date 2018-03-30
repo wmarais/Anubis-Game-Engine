@@ -11,15 +11,15 @@
 /** Write the general log message. */
 #define ANUBIS_WRITE_LOG(level, levelStr, msg)  \
 {\
-  std::stringstream ss; \
-  ss << levelStr << " | " \
-     << Anubis::Common::Timer::nsSinceEpoch() << " | " \
-     << std::this_thread::get_id() << " | " \
-     << ANUBIS_FILENAME << " | " \
-     << __LINE__ << " | " \
-     << __PRETTY_FUNCTION__ << " | " \
-     << msg; \
-     Anubis::Common::Log::get().write(level, ss.str()); \
+  std::stringstream _lAnubisLogSS; \
+  _lAnubisLogSS  << levelStr << " | " \
+                 << Anubis::Common::Timer::nsSinceEpoch() << " | " \
+                 << std::this_thread::get_id() << " | " \
+                 << ANUBIS_FILENAME << " | " \
+                 << __LINE__ << " | " \
+                 << __PRETTY_FUNCTION__ << " | " \
+                 << msg; \
+                 Anubis::Common::Log::get().write(level, _lAnubisLogSS.str()); \
 }
 
 #define ANUBIS_LOG_FATAL_ERROR(msg) \

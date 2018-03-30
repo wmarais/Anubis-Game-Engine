@@ -1,0 +1,8 @@
+add_executable(AnubisExample_SimpleTCPCommsServer Server.cpp)
+add_executable(AnubisExample_SimpleTCPCommsClient Client.cpp)
+
+target_link_libraries(AnubisExample_SimpleTCPCommsServer
+  AnubisNetwork AnubisCommon)
+
+target_link_libraries(AnubisExample_SimpleTCPCommsClient
+  AnubisNetwork AnubisCommon)

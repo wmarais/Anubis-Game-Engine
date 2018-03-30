@@ -66,7 +66,7 @@
 //        /** A simple constructor to quickly initialise the object. */
 //        Operation(Types type, const Common::UUID & objID,
 //          std::shared_ptr<Common::SubObj> data) : fType(type), fObjID(objID),
-//          fData(data) {}\
+//          fData(data) {}
 //      };
 
 //      /** The mutex to lock access to the operations thread. */

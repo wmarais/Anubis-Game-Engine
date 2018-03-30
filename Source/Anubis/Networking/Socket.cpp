@@ -4,289 +4,290 @@
 using namespace Anubis::Networking;
 
 /******************************************************************************/
-struct Anubis::Networking::Socket::Data
+struct Socket::Data final
 {
-//  /* Lock to control access to the WSAStartup function. I'm not sure if this is
-//   * required but there seems to be no explicit statement about thread safety,
-//   * so not taking any chances. */
-//  static std::mutex fWSAStartupMutex;
+  /** The handle to the socket object. */
+  SOCKET fHandle;
 
-//  /** The result of the winsock startup. For every succesful startup there
-//   * must be a cleanup. */
-//  int fWSAStartupResult;
+  /** Default constructo to intialise the important fields. */
+  Data(SOCKET handle);
 
-//  /** The Winsock socket type that was created. */
-//  int fType;
-
-//  /** The protocol to use with the socket. */
-//  int fProtocol;
-
-//  /** The handle to the socket object. */
-//  SOCKET fHandle;
-
-//  /** Default constructo to intialise the important fields. */
-//  Data() : fWSAStartupResult(-1), fHandle(INVALID_SOCKET) {}
+  Data(uint16_t family, int type, int protocol);
+  ~Data();
 };
+
+/******************************************************************************/
+Socket::Data::Data(SOCKET handle) : fHandle(handle) {}
+
+/******************************************************************************/
+Socket::Data::Data(uint16_t family, int type, int protocol) :
+  fHandle(INVALID_SOCKET)
+{
+  /* Create the socket. */
+  fHandle = socket(family, type, protocol);
+
+  /* Check if the socket was created or not. */
+  if(fHandle == INVALID_SOCKET)
+  {
+    ANUBIS_THROW_RUNTIME_EXCEPTION("socket() failed with error code: " <<
+                                   WSAGetLastError());
+  }
+
+  /* Allow address reuse. */
+  BOOL optVal = TRUE;
+  if(setsockopt(fHandle, SOL_SOCKET, SO_REUSEADDR,
+                reinterpret_cast<char*>(&optVal), sizeof(BOOL)) != 0)
+  {
+    ANUBIS_THROW_RUNTIME_EXCEPTION("setsockopt() failed with error code: " <<
+                                   WSAGetLastError());
+  }
+}
+
+/******************************************************************************/
+Socket::Data::~Data()
+{
+  /* Check if the socket is open. */
+  if(fHandle != INVALID_SOCKET)
+  {
+    /* Close the socket and log any errors. */
+    if(closesocket(fHandle) != 0)
+    {
+      ANUBIS_LOG_ERROR("closesocket() failed with error code: " <<
+                       WSAGetLastError());
+    }
+  }
+}
 
 /******************************************************************************/
 Socket::Socket(std::unique_ptr<Data> & data)
 {
-//  /* Set the socket memory. */
-//  fData = std::move(data);
+  /* Set the socket memory. */
+  fData = std::move(data);
 }
 
 /******************************************************************************/
-Socket::Socket(Types type, const IPEndPoint &localEP)
+Socket::Socket(Types type, Versions version)
 {
-//  /** Create the data object of the socket. */
-//  fData = std::make_unique<Data>();
-
-//  /* Store the local endpoint information. */
-//  fLocalEP = localEP;
-
-//  /* Convert the enum socket type (Types) to a winsock socket type and
-//   * protocol. */
-//  fData->fType = SOCK_DGRAM;
-//  fData->fProtocol = IPPROTO_UDP;
-
-//  /* Check if TCP is required. */
-//  if(type == Types::TCP)
-//  {
-//    /* Configure for TCP. */
-//    fData->fType = SOCK_STREAM;
-//    fData->fProtocol = IPPROTO_TCP;
-//  }
-
-//  /* Lock the startup mutex. */
-//  std::lock_guard<std::mutex> lock(Data::fWSAStartupMutex);
-
-//  ANUBIS_LOG_DEBUG("Initialising Winsock 2.0.");
-//  WSADATA wsa;
-//  fData->fWSAStartupResult = WSAStartup(MAKEWORD(2,2), &wsa);
-
-//  /* Check if the socket library was started up properly. */
-//  if(fData->fWSAStartupResult != 0)
-//  {
-//    ANUBIS_THROW_RUNTIME_EXCEPTION("WSAStartup failed with error code: " <<
-//                                  fData->fWSAStartupResult);
-//  }
-
-//  /* Get the family type. */
-//  uint16_t family = fLocalEP.isIPv4() ? AF_INET : AF_INET6;
-
-//  ANUBIS_LOG_DEBUG("Creating socket.");
-//  fData->fHandle = socket(family, fData->fType, fData->fProtocol);
-
-//  /* Check if the socket was created or not. */
-//  if(fData->fHandle == INVALID_SOCKET)
-//  {
-//    ANUBIS_THROW_RUNTIME_EXCEPTION("socket() failed with error code: " <<
-//                                   WSAGetLastError());
-//  }
+  /* Create the socket object. */
+  fData = std::make_unique<Data>(
+        version == Versions::IPv4 ? AF_INET : AF_INET6,
+        type == Types::TCP ? SOCK_STREAM : SOCK_DGRAM,
+        type == Types::TCP ? IPPROTO_TCP : IPPROTO_UDP);
 }
 
 /******************************************************************************/
-Socket::~Socket()
+Socket::~Socket() = default;
+
+/******************************************************************************/
+void Socket::bind(const IPEndPoint & ep)
 {
-//  /* Check the data is valid. */
-//  if(!fData)
-//  {
-//    /* Can't do anything without valid data. */
-//    return;
-//  }
+  ANUBIS_LOG_DEBUG("Binding to: " << ep);
 
-//  /* Check the result of the startup, dont call cleanup unless it was
-//   * sucessful. */
-//  if(fData->fWSAStartupResult == 0)
-//  {
-//    /* Check if the socket is open. */
-//    if(fData->fHandle != INVALID_SOCKET)
-//    {
-//      /* Close the socket and log any errors. */
-//      if(closesocket(fData->fHandle) != 0)
-//      {
-//        ANUBIS_LOG_ERROR("closesocket() failed with error code: " <<
-//                         WSAGetLastError());
-//      }
-//    }
+  /* Bind the socket. */
+  int result = ::bind(fData->fHandle, reinterpret_cast<const struct sockaddr*>
+                      (ep.addrData()), ep.addrDataLen());
 
-//    /* Cleanup and log any errors. */
-//    if(WSACleanup() != 0)
-//    {
-//      ANUBIS_LOG_ERROR("WSACleanup() failed with error code: " <<
-//                       WSAGetLastError());
-//    }
-//  }
+  /* Check the bind result. */
+  if(result != 0)
+  {
+    ANUBIS_THROW_RUNTIME_EXCEPTION("bind() failed with error code: " <<
+                                   result);
+  }
 }
 
 /******************************************************************************/
-void Socket::bind(const IPEndPoint & localEP)
+IPEndPoint Socket::getEP() const
 {
-//  /* Check the bind result. */
-//  if(::bind(fData->fHandle, reinterpret_cast<const sockaddr*>(localEP.data()),
-//            localEP.dataLen()) != 0)
-//  {
-//    ANUBIS_THROW_RUNTIME_EXCEPTION("bind() failed with error code: " <<
-//                                   WSAGetLastError());
-//  }
+  /* A location to store the socket address. */
+  struct sockaddr_storage addrData;
 
-//  /* Record the address that this socket is bound too. */
-//  fLocalEP = localEP;
+  /* The length of the address. */
+  socklen_t addrLen = 0;
+
+  /* Read the socket's address information. */
+  if(getsockname(fData->fHandle,
+                 reinterpret_cast<struct sockaddr*>(&addrData),
+                 &addrLen) != 0)
+  {
+    ANUBIS_THROW_RUNTIME_EXCEPTION("getsockname() failed with error code: " <<
+                                   WSAGetLastError());
+  }
+
+  /* Return the IP endpoint information of the socket. */
+  return IPEndPoint(&addrData, addrLen);
 }
 
 /******************************************************************************/
 std::unique_ptr<Socket> Socket::listen(size_t backlog)
 {
-//  /* Listen for a connection. */
-//  if(::listen(fData->fHandle, backlog) != 0)
-//  {
-//    ANUBIS_THROW_RUNTIME_EXCEPTION("listen() failed with error code: " <<
-//                                   WSAGetLastError());
-//  }
+  /* Listen for a connection. */
+  if(::listen(fData->fHandle, backlog) != 0)
+  {
+    ANUBIS_THROW_RUNTIME_EXCEPTION("listen() failed with error code: " <<
+                                   WSAGetLastError());
+  }
 
-//  std::unique_ptr<uint8_t[]> addr = nullptr;
-//  int addrLen = 0;
+  /* Accept the connection and read the address of the client. */
+  SOCKET clientHandle = accept(fData->fHandle, nullptr, nullptr);
 
-//  /* Check if the current socket is an IPv4 socket. */
-//  if(fLocalEP.isIPv4())
-//  {
-//    /* Calculate the length of an IPv4 address. */
-//    addrLen = sizeof(sockaddr_in);
-//  }
-//  else
-//  {
-//    /* Calculate the length of an IPv6 address. */
-//    addrLen = sizeof(sockaddr_in6);
-//  }
+  /* Create the data object for the socket. */
+  std::unique_ptr<Data> data = std::make_unique<Data>(clientHandle);
 
-//  /* Create the memory to store the socket data. */
-//  addr = std::unique_ptr<uint8_t[]>(new uint8_t[addrLen]);
-
-//  /* Accept the connection and read the address of the client. */
-//  SOCKET clientHandle = accept(fData->fHandle,
-//                               reinterpret_cast<struct sockaddr*>(addr.get()),
-//                               &addrLen);
-
-//  /* Create the socket data. */
-//  std::unique_ptr<Data> data = std::make_unique<Data>();
-
-//  /* Set the properties of the client socket. */
-//  data->fType = fData->fType;
-//  data->fProtocol = fData->fProtocol;
-//  data->fHandle = clientHandle;
-
-//  /* Return the connected socket. */
-//  return std::make_unique<Socket>(data);
+  /* Return the connected socket. */
+  return std::unique_ptr<Socket>(new Socket(data));
 }
 
 /******************************************************************************/
-bool Socket::connect(const IPEndPoint & addr)
+bool Socket::connect(const IPEndPoint & ep)
 {
-//  ANUBIS_LOG_DEBUG("Attempting to connect to server.");
-//  if(::connect(fData->fHandle,
-//               reinterpret_cast<const struct sockaddr*>(addr.data()),
-//               addr.dataLen()) == 0)
-//  {
-//    ANUBIS_LOG_DEBUG("Connection successful!");
-//    return true;
-//  }
+  ANUBIS_LOG_DEBUG("Attempting to connect to server.");
+  if(::connect(fData->fHandle,
+               reinterpret_cast<const struct sockaddr*>(ep.addrData()),
+               ep.addrDataLen()) == 0)
+  {
+    ANUBIS_LOG_DEBUG("Connection successful!");
+    return true;
+  }
 
-//  ANUBIS_LOG_DEBUG("Connection failed with error code: " << WSAGetLastError());
-//  return false;
+  ANUBIS_LOG_DEBUG("Connection failed with error code: " << WSAGetLastError());
+  return false;
 }
 
 /******************************************************************************/
-void Socket::send(const std::vector<uint8_t> & data)
+void Socket::shutdown()
 {
-//  /* The number of bytes that were sent. */
-//  size_t bytesSent = 0;
-
-//  /* Keep looping until all bytes are sent. */
-//  while(bytesSent != data.size())
-//  {
-//    /* Send as many bytes as possible. */
-//    int result = ::send(fData->fHandle,
-//                        reinterpret_cast<const char*>(data.data() + bytesSent),
-//                        data.size() - bytesSent, 0);
-
-//    /* Check if and error occured. */
-//    if(result < 0)
-//    {
-//      ANUBIS_THROW_RUNTIME_EXCEPTION("send() failed with error code: " <<
-//                                     WSAGetLastError());
-//    }
-//    else
-//    {
-//      /* Increment the number of bytes sent. */
-//      bytesSent += result;
-//    }
-//  }
+  /* Shutdown the socket. */
+  if(::shutdown(fData->fHandle, SD_BOTH) != 0)
+  {
+    ANUBIS_THROW_RUNTIME_EXCEPTION("shutdown() failed with error code: " <<
+                                   WSAGetLastError());
+  }
 }
 
 /******************************************************************************/
-void Socket::recv(std::vector<uint8_t> & data, size_t len)
+bool Socket::send(const std::vector<uint8_t> & data)
 {
-//  /* Resize the buffer based on what was expected to be read. */
-//  data.resize(len);
+  /* The number of bytes that were sent. */
+  size_t bytesSent = 0;
 
-//  /* Read the bytes. */
-//  int bytesRead = ::recv(fData->fHandle,
-//                         reinterpret_cast<char*>(data.data()), len, 0);
+  /* Keep looping until all bytes are sent. */
+  while(bytesSent != data.size())
+  {
+    /* Send as many bytes as possible. */
+    int result = ::send(fData->fHandle,
+                        reinterpret_cast<const char*>(data.data() + bytesSent),
+                        data.size() - bytesSent, 0);
 
-//  /* Check if an error occured. */
-//  if(bytesRead < 0)
-//  {
-//    ANUBIS_THROW_RUNTIME_EXCEPTION("recv() failed with error code: " <<
-//                                   WSAGetLastError());
-//  }
-//  else
-//  {
-//    /* Resize the buffer based on what was read. This should only every be
-//     * called when the socket has been shutdown during a read, at which point
-//     * the bytesRead is expected to be 0. */
-//    data.resize(bytesRead);
-//  }
+    /* Check if the bytes were sent. */
+    if(result > 0)
+    {
+      /* Increment the number of bytes sent. */
+      bytesSent += result;
+    }
+    /* Check if the connection was closed. */
+    else if(result == 0)
+    {
+      /* Return false to indicate that the connection was closed. */
+      return false;
+    }
+    /* Otherwise an error occured. */
+    else
+    {
+      ANUBIS_THROW_RUNTIME_EXCEPTION("send() failed with error code: " <<
+                                     WSAGetLastError());
+    }
+  }
+
+  /* Return the number of bytes sent. */
+  return bytesSent;
 }
 
 /******************************************************************************/
-void Socket::sendTo(const IPEndPoint & addr, const std::vector<uint8_t> & data)
+bool Socket::recv(std::vector<uint8_t> & data, size_t len)
 {
-//  /* The number of bytes that were sent. */
-//  size_t bytesSent = 0;
+  /* Resize the buffer based on what was expected to be read. */
+  data.resize(len);
 
-//  /* Keep looping until all bytes are sent. */
-//  while(bytesSent != data.size())
-//  {
-//    /* Send as many bytes as possible. */
-//    int result = sendto(fData->fHandle,
-//                        reinterpret_cast<const char*>(data.data() + bytesSent),
-//                        data.size() - bytesSent, 0,
-//                        reinterpret_cast<const struct sockaddr*>(addr.data()),
-//                        addr.dataLen());
+  /* Read the bytes. */
+  size_t bytesRead = 0;
 
-//    /* Check if and error occured. */
-//    if(result < 0)
-//    {
-//      ANUBIS_THROW_RUNTIME_EXCEPTION("sendto() failed with error code: " <<
-//                                     WSAGetLastError());
-//    }
-//    else
-//    {
-//      /* Increment the number of bytes sent. */
-//      bytesSent += result;
-//    }
-//  }
+  /* Keep reading until all the requested data is read. */
+  while(bytesRead != len)
+  {
+    /* Perform a read. */
+    int result = ::recv(fData->fHandle,
+                        reinterpret_cast<char*>(data.data() + bytesRead),
+                        len - bytesRead, 0);
+
+    /* Check if an error occured. */
+    /* Check if data was read. */
+    if(result > 0)
+    {
+      /* Increment the bytes read counter. */
+      bytesRead += result;
+    }
+    /* Check if the socket was closed. */
+    else if(result == 0)
+    {
+      /* Retur false to indicate that the socket was closed. */
+      return false;
+    }
+    /* Else and error occured. */
+    else
+    {
+      ANUBIS_THROW_RUNTIME_EXCEPTION("recv() failed with error code: " <<
+                                     WSAGetLastError());
+    }
+  }
+
+  /* Resize the buffer based on what was read. This should only every be
+   * called when the socket has been shutdown during a read, at which point
+   * the bytesRead is expected to be 0. */
+  data.resize(bytesRead);
+
+  /* Return true to indicate that the data was read. */
+  return true;
 }
 
 /******************************************************************************/
-void Socket::recvFrom(IPEndPoint & addr, std::vector<uint8_t> & data,
+void Socket::sendTo(const IPEndPoint & ep, const std::vector<uint8_t> & data)
+{
+  /* The number of bytes that were sent. */
+  size_t bytesSent = 0;
+
+  /* Keep looping until all bytes are sent. */
+  while(bytesSent != data.size())
+  {
+    /* Send as many bytes as possible. */
+    int result = sendto(fData->fHandle,
+                        reinterpret_cast<const char*>(data.data() + bytesSent),
+                        data.size() - bytesSent, 0,
+                        reinterpret_cast<const struct sockaddr*>(ep.addrData()),
+                        ep.addrDataLen());
+
+    /* Check if and error occured. */
+    if(result < 0)
+    {
+      ANUBIS_THROW_RUNTIME_EXCEPTION("sendto() failed with error code: " <<
+                                     WSAGetLastError());
+    }
+    else
+    {
+      /* Increment the number of bytes sent. */
+      bytesSent += result;
+    }
+  }
+}
+
+/******************************************************************************/
+void Socket::recvFrom(IPEndPoint & ep, std::vector<uint8_t> & data,
                       size_t len)
 {
 //  /* Resize the buffer based on what was expected to be read. */
 //  data.resize(len);
 
 //  /* The length of the address structure. */
-//  int addrLen = addr.dataLen();
+//  int addrLen = addr.addrDataLen();
 
 //  /* Read the bytes. */
 //  int bytesRead = recvfrom(fData->fHandle,
