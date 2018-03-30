@@ -3,13 +3,13 @@
 using namespace Anubis::Networking;
 
 /******************************************************************************/
-TCPServer::TCPServer(uint16_t port, const std::string & iface) :
+TCPServer::TCPServer(IPEndPoint localEP) :
   fIsExecuting(true)
 {
   try
   {
     /* Create the listen socket. */
-    //fListenSocket = std::make_unique<Socket>();
+    fListenSocket = std::make_unique<Socket>(Socket::Types::TCP, localEP);
 
     /* Create the thread to listen for new connections. */
     fThread = std::thread(&TCPServer::listenThread, this);

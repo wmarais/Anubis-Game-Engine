@@ -7,69 +7,70 @@ namespace Anubis
 {
   namespace Networking
   {
+    /** Forward declare the the socket class so it can be made a friend of the
+     * IPEndPoint class. */
+    class Socket;
+
+    /***********************************************************************//**
+     * A class for containing the address information of an IP End Point. The
+     * class can accept IPv4, IPv6 and DNS addresses directly.
+     **************************************************************************/
     class IPEndPoint
     {
-      /** The number of octets in an IPv4 Address. */
+      /** Make the socket class a friend of the IPEndPoint. This is mostly
+       * reduce the public interface that is available to developers (otherwise
+       * dangerouse functions and memory has to be exposed). */
+      friend class Socket;
+
+      /** The number of octets (uint8_t / bytes) in an IPv4 Address. */
       static const size_t kIPv4OctetCount = 4;
 
-      /** The number of octets in an IPv6 address. */
+      /** The number of octets (uint8_t / bytes) in an IPv6 address. */
       static const size_t kIPv6OctetCount = 16;
 
+      /** The number of shorts (uint16_t) in an IPv6 address. */
       static const size_t kIPv6ShortsCount = 8;
 
-      /** Indicate if the the IP address is a v4 address or not. */
-      bool fIsV4;
+      /** A class to store the platform specific information of the socket. */
+      struct Data;
 
-      /** The data of the socket. */
-      std::unique_ptr<uint8_t[]> fData;
-
-      /** The length of the data. */
-      size_t fDataLen;
-
-      static std::vector<std::string> split(const std::string & str,
-                                            char delim);
-
+      /** The instance of the platform specific data. */
+      std::unique_ptr<Data> fData;
 
       /*********************************************************************//**
-       * Implement the inet_pton function for IPv4 addresses.
+       * Return the pointer to the OS specific address data. This is used
+       * directly by the Socket class.
        *
-       * @param src The address string to be converted.
-       * @param dst The destination where the converted address will be written
-       *            too.
+       * @return  The pointer to the address data.
        ************************************************************************/
-      static void inetPToN4(const std::string & src,
-                            uint8_t dst[kIPv4OctetCount]);
+      const uint8_t * addrData() const;
 
       /*********************************************************************//**
-       * Implement the inet_pton function for IPv6 addresses.
+       * Return the length of the OS specific address data. This is used
+       * directly by the Socket class.
        *
-       * @param src The address string to be converted.
-       * @param dst The destination where the converted address will be written
-       *            too.
+       * @return  The length of the address data.
        ************************************************************************/
-      static void inetPToN6(const std::string & src,
-                            uint8_t dst[kIPv6OctetCount]);
+      const size_t addrDataLen() const;
 
     public:
       enum class Preferences : int
       {
         /** Only use IPv4 addresses. */
-        IPv4Only,
+        IPv4Only  = 0,
 
         /** Only use IPv6 addresses. */
-        IPv6Only,
+        IPv6Only  = 1,
 
         /** Prefer IPv4, but use IPv6 if necisary. */
-        IPv4,
+        IPv4      = 2,
 
         /** Prefer IPv6, but use IPv4 if necisary. */
-        IPv6,
+        IPv6      = 3,
 
-        /** Use the first valid address. */
-        Any
+        /** Use IPv4 if possible, else IPv6. */
+        Any       = 4
       };
-
-      IPEndPoint();
 
       /*********************************************************************//**
        * Create an IP address object from the specified port and node name.
@@ -85,61 +86,80 @@ namespace Anubis
        * @param pref      The preffered IP version.
        * @return          The created IP address object.
        ************************************************************************/
-      IPEndPoint(uint16_t port,
+      IPEndPoint(uint16_t port = 0,
                  const std::string & nodeName = "",
                  Preferences pref = Preferences::Any);
 
+      /*********************************************************************//**
+       * Perform a deep copy of the cp endpoint object.
+       *
+       * @param cp  The object to copy.
+       ************************************************************************/
       IPEndPoint(const IPEndPoint & cp);
+
+      /*********************************************************************//**
+       * The destructor is not used for anything, but is necisary for
+       * compilation.
+       ************************************************************************/
       ~IPEndPoint();
 
       /*********************************************************************//**
-       * Create an IPv4 Address from the supplied port and address. If the addr
-       * string is empty, then any address will be used.
+       * Perform a deep copy of the rhs endpoint object.
        *
-       * @param port  The port to use.
-       * @param addr  The IP address to use.
-       * @return      The IPAddress object that was created.
+       * @param cp  The object to copy.
        ************************************************************************/
-      static IPEndPoint makeIPv4(uint16_t port, const std::string & addr = "");
-
-      /*********************************************************************//**
-       * Create an IPv6 Address from the supplied port and address. If the addr
-       * string is empty, then any address will be used.
-       *
-       * @param port  The port to use.
-       * @param addr  The IP address to use.
-       * @return      The IPAddress object that was created.
-       ************************************************************************/
-      static IPEndPoint makeIPv6(uint16_t port, const std::string & addr = "");
-
-
       IPEndPoint & operator = (const IPEndPoint & rhs);
 
-      ANUBIS_INLINE const uint8_t * data() const
-      {
-        return fData.get();
-      }
-
-      ANUBIS_INLINE uint8_t * data ()
-      {
-        return fData.get();
-      }
-
-      ANUBIS_INLINE size_t dataLen() const
-      {
-        return fDataLen;
-      }
-
+      /*********************************************************************//**
+       * Check if the IPEndPoint is configured an IPv4 address.
+       *
+       * @return  True if an IPv4 address is used, else False.
+       ************************************************************************/
       bool isIPv4() const;
 
+      /*********************************************************************//**
+       * Check if the IPEndPoint is configured with an IPv6 address.
+       *
+       * @return  True if an IPv6 address is used, else false.
+       ************************************************************************/
       bool isIPv6() const;
 
-      std::string ipStr() const;
+      /*********************************************************************//**
+       * Return the node name that was supplied to the constructor. This is what
+       * should be saved to a settings file (not much value in saving the ip
+       * string returned by ip()).
+       *
+       * @return  The node name of the end point.
+       ************************************************************************/
+      std::string nodeName() const;
+
+      /*********************************************************************//**
+       * Return the port number that was supplied to the constructor. This
+       * should be saved to the settings file for a Server Socket, but optional
+       * for client sockets.
+       *
+       * @return  The port number of the end point.
+       ************************************************************************/
+      uint16_t port() const;
+
+      /*********************************************************************//**
+       * Return the IP address that is used. This can be diffirent to the node
+       * name specified.
+       *
+       * @return  The IP address as a string.
+       ************************************************************************/
+      std::string ip() const;
     };
   }
 }
 
+/***************************************************************************//**
+ * Provide a global overload for the
+ * @param os
+ * @param ipAddr
+ * @return
+ ******************************************************************************/
 std::ostream & operator << (std::ostream & os,
-                            const Anubis::Networking::IPEndPoint & ipAddr);
+                            const Anubis::Networking::IPEndPoint & ep);
 
 #endif /* ANUBIS_NETWORK_IP_END_POINT_HPP */

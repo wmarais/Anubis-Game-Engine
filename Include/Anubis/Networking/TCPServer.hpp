@@ -66,7 +66,7 @@ namespace Anubis
 
     public:
 
-      TCPServer(uint16_t port, const std::string & iface = "");
+      TCPServer(IPEndPoint localEP);
       ~TCPServer();
 
     };

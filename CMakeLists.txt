@@ -109,6 +109,7 @@ endif()
 ################################################################################
 set(AnubisCommon_HEADERS
   Include/Anubis/Common.hpp
+  Include/Anubis/Common/Algorithms.hpp
   Include/Anubis/Common/Barrier.hpp
   Include/Anubis/Common/CircularQueue.hpp
   Include/Anubis/Common/Float.hpp
@@ -123,6 +124,7 @@ set(AnubisCommon_HEADERS
 )
 
 set(AnubisCommon_SOURCES
+  Source/Anubis/Common/Algorithms.cpp
   Source/Anubis/Common/Barrier.cpp
   Source/Anubis/Common/Float.cpp
   Source/Anubis/Common/Log.cpp

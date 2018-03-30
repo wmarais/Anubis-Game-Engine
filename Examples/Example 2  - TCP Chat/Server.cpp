@@ -16,11 +16,9 @@ void gListenThreadFunc()
 int main(int argc, char * argv[])
 {
   /* The local IP Address (Interface) and port that the socket will bind too. */
-  IPEndPoint listenAddress(10000, "localhost");
+  IPEndPoint listenEP(10000, "localhost", IPEndPoint::Preferences::IPv6);
 
-  std::cout << "IP Address: " << listenAddress << std::endl;
-
-
-
+  /* Print the end point to see the address details. */
+  std::cout << "Listen End-Point: " << listenEP << std::endl;
 
 }

@@ -10,7 +10,7 @@ namespace Anubis
   {
     /***********************************************************************//**
      * A wrapper class around the sockets() layer to abstract away Winsock and
-     * Posix sock interfaces. This class is designed to only work with network
+     * Posix socket interfaces. This class is designed to only work with IP
      * sockets.
      **************************************************************************/
     class Socket
@@ -22,7 +22,7 @@ namespace Anubis
       std::unique_ptr<Data> fData;
 
       /** The Address of this Socket. */
-      IPEndPoint fAddress;
+      IPEndPoint fLocalEP;
     public:
 
       /** The list of supported Socket Types. */
@@ -35,17 +35,7 @@ namespace Anubis
         TCP
       };
 
-      /** The supported IP versions. */
-      enum class IPVersions
-      {
-        /** Select IPv4 for communication. */
-        IPv4,
-
-        /** Select IPv6 for communication. */
-        IPv6
-      };
-
-      Socket(std::unique_ptr<Data> &data);
+      Socket(std::unique_ptr<Data> & data);
 
       /*********************************************************************//**
        * Create a socket using the specified socket type and IP version.
@@ -53,7 +43,7 @@ namespace Anubis
        * @param type    The type of packets / flow control to use.
        * @param version The IP protocol version to use. The defual is IPv4.
        ************************************************************************/
-      Socket(Types type, IPVersions version = IPVersions::IPv4);
+      Socket(Types type, const IPEndPoint & localEP = IPEndPoint(0, ""));
 
       /*********************************************************************//**
        * Destroy the allocated data and close the socket.
@@ -61,13 +51,13 @@ namespace Anubis
       virtual ~Socket();
 
       /*********************************************************************//**
-       * Bind the socket to the specific local port and local interface. If the
+       * Bind the socket to the specific local port and interface. If the
        * address is empty, then any interface will be used.
        *
        * @param port  The local port to bind too.
        * @param iface The local interface to bind too.
        ************************************************************************/
-      void bind(const IPEndPoint & addr);
+      void bind(const IPEndPoint & localEP);
 
       /*********************************************************************//**
        * Listen for a client trying to connect. This is used by TCP servers to

@@ -5,18 +5,130 @@ using namespace Anubis::Common;
 using namespace Anubis::Networking;
 
 /******************************************************************************/
-IPEndPoint::IPEndPoint() : fData(nullptr), fDataLen(0)
+struct Anubis::Networking::IPEndPoint::Data
 {
+  /* Lock to control access to the WSAStartup function. I'm not sure if this is
+   * required but there seems to be no explicit statement about thread safety,
+   * so not taking any chances. */
+  static std::mutex fWSAMutex;
+
+  /** The result of the winsock startup. For every succesful startup there
+   * must be a cleanup. */
+  int fWSAStartupResult;
+
+  /** The node name that was supplied. This can be diffirent to the IP address
+   * that is used. I.e. if a dns name was specified. */
+  std::string fNodeName;
+
+  /** The byte data of the address structure. */
+  std::unique_ptr<uint8_t[]> fAddrData;
+
+  /** The length of the data. */
+  size_t fAddrDataLen;
+
+  Data();
+  ~Data();
+
+  void buildV4Addr(const sockaddr_in * src, uint16_t port);
+  void buildV6Addr(const sockaddr_in6 * src, uint16_t port);
+};
+
+std::mutex Anubis::Networking::IPEndPoint::Data::fWSAMutex;
+
+/******************************************************************************/
+IPEndPoint::Data::Data() : fWSAStartupResult(-1), fAddrDataLen(0)
+{
+  /* Lock the WSA access mutex. */
+  std::lock_guard<std::mutex> lock(fWSAMutex);
+
+  /* Startup winsock and save the result. */
   WSADATA wsa;
-  WSAStartup(MAKEWORD(2,2), &wsa);
+  fWSAStartupResult = WSAStartup(MAKEWORD(2,2), &wsa);
+
+  /* Check if the sockets library was started properly. */
+  if(fWSAStartupResult != 0)
+  {
+    ANUBIS_THROW_RUNTIME_EXCEPTION("WSAStartup failed with error code: " <<
+                                   fWSAStartupResult);
+  }
+}
+
+/******************************************************************************/
+IPEndPoint::Data::~Data()
+{
+  /* Lock the WSA access mutex. */
+  std::lock_guard<std::mutex> lock(fWSAMutex);
+
+  /* Check if the data object was created and that the sockets library was
+   * successfully initialised. */
+  if(fWSAStartupResult == 0)
+  {
+    /* Clean up the sockets library. */
+    WSACleanup();
+  }
+}
+
+/******************************************************************************/
+void IPEndPoint::Data::buildV4Addr(const sockaddr_in * src, uint16_t port)
+{
+  /* Calculate the size of the addr object / memory to allocate. */
+  fAddrDataLen = sizeof(struct sockaddr_in);
+
+  /* Alocate the memory to store the addr object. */
+  fAddrData = std::unique_ptr<uint8_t[]>(new uint8_t[fAddrDataLen]);
+
+  /* Get a type safe pointer to set the parameters. */
+  struct sockaddr_in * dst = reinterpret_cast<struct sockaddr_in*>
+      (fAddrData.get());
+
+  /* Zero the memory. */
+  memset(dst, 0, sizeof(struct sockaddr_in));
+
+  /* Copy the IP address only. */
+  memcpy(&(dst->sin_addr), &(src->sin_addr), sizeof(struct in_addr));
+
+  /* Set the port number. */
+  dst->sin_port = htons(port);
+
+  /* Set the address family. */
+  dst->sin_family = htons(AF_INET);
+}
+
+/******************************************************************************/
+void IPEndPoint::Data::buildV6Addr(const sockaddr_in6 * src, uint16_t port)
+{
+  /* Calculate the size of the addr object / memory to allocate. */
+  fAddrDataLen = sizeof(struct sockaddr_in6);
+
+  /* Alocate the memory to store the addr object. */
+  fAddrData = std::unique_ptr<uint8_t[]>(new uint8_t[fAddrDataLen]);
+
+  /* Get a type safe pointer to set the parameters. */
+  struct sockaddr_in6 * dst = reinterpret_cast<struct sockaddr_in6*>
+      (fAddrData.get());
+
+  /* Zero the memory. */
+  memset(dst, 0, sizeof(struct sockaddr_in6));
+
+  /* Copy the IP address only. */
+  memcpy(&(dst->sin6_addr), &(src->sin6_addr), sizeof(struct in6_addr));
+
+  /* Set the port number. */
+  dst->sin6_port = htons(port);
+
+  /* Set the address family. */
+  dst->sin6_family = htons(AF_INET6);
 }
 
 /******************************************************************************/
 IPEndPoint::IPEndPoint(uint16_t port, const std::string & nodeName,
-                       Preferences pref)
+  Preferences pref) : fData(nullptr)
 {
-  WSADATA wsa;
-  WSAStartup(MAKEWORD(2,2), &wsa);
+  /* Create the data object. */
+  fData = std::make_unique<Data>();
+
+  /* Save the node name. */
+  fData->fNodeName = nodeName;
 
   /* The hints to pass for address information lookup. */
   struct addrinfo hints;
@@ -111,19 +223,28 @@ IPEndPoint::IPEndPoint(uint16_t port, const std::string & nodeName,
   /* Check if an address was found. */
   if(bestAdrInfo != nullptr)
   {
-    /* Create the data for the address. */
-    fDataLen = bestAdrInfo->ai_addrlen;
-    fData = std::unique_ptr<uint8_t[]>(new uint8_t[fDataLen]);
+    if(bestAdrInfo->ai_family == AF_INET)
+    {
+      /* Check the assumption about address length and socket structure length
+       * matches. */
+      assert(bestAdrInfo->ai_addrlen == sizeof(struct sockaddr_in) &&
+             "bestAdrInfo->ai_addrlen != sizeof(struct sockaddr_in)");
 
-    /* Copy the address. */
-    memcpy(fData.get(), bestAdrInfo->ai_addr, fDataLen);
+      /* Build and IPv4 address. */
+      fData->buildV4Addr(reinterpret_cast<struct sockaddr_in*>
+                         (bestAdrInfo->ai_addr), port);
+    }
+    else
+    {
+      /* Check the assumption about address length and socket structure length
+       * matches. */
+      assert(bestAdrInfo->ai_addrlen == sizeof(struct sockaddr_in6) &&
+             "bestAdrInfo->ai_addrlen != sizeof(struct sockaddr_in6)");
 
-    /* Set the address family / protocol version. */
-    *reinterpret_cast<uint16_t*>(fData.get()) = htons(family);
-
-    /* Set the port number. */
-    *reinterpret_cast<uint16_t*>(fData.get() + sizeof(uint16_t))
-        = htons(port);
+      /* Build and IPv6 address. */
+      fData->buildV6Addr(reinterpret_cast<struct sockaddr_in6*>
+                         (bestAdrInfo->ai_addr), port);
+    }
   }
 
   /* Free the queue. */
@@ -140,231 +261,92 @@ IPEndPoint::IPEndPoint(uint16_t port, const std::string & nodeName,
 /******************************************************************************/
 IPEndPoint::IPEndPoint(const IPEndPoint & cp)
 {
-  WSADATA wsa;
-  WSAStartup(MAKEWORD(2,2), &wsa);
+  /* Create the data object. */
+  fData = std::make_unique<Data>();
 
-  /** Indicate if the the IP address is a v4 address or not. */
-  fIsV4 = cp.fIsV4;
-  fDataLen = cp.fDataLen;
+  /* Copy the node name. */
+  fData->fNodeName = cp.fData->fNodeName;
+
+  /* Set the data length. */
+  fData->fAddrDataLen = cp.fData->fAddrDataLen;
 
   /* Create the memory for the address object. */
-  fData = std::unique_ptr<uint8_t[]>(new uint8_t[fDataLen]);
+  fData->fAddrData = std::unique_ptr<uint8_t[]>(
+        new uint8_t[fData->fAddrDataLen]);
 
   /* Copy the address structure. */
-  memcpy(fData.get(), cp.fData.get(), fDataLen);
+  memcpy(fData->fAddrData.get(), cp.fData->fAddrData.get(),
+         fData->fAddrDataLen);
 }
 
 /******************************************************************************/
-IPEndPoint::~IPEndPoint()
-{
-  WSACleanup();
-}
-
-/******************************************************************************/
-std::vector<std::string> IPEndPoint::split(const std::string & str,
-                                           char delim)
-{
-  /* The list of tokens to return. */
-  std::vector<std::string> tokens;
-
-  /* The start of the current token. */
-  auto tokenStart = str.begin();
-
-  /* Keep generating tokens while there are tokens. */
-  do
-  {
-    /* The end of the current token. */
-    auto tokenEnd = std::find(tokenStart, str.end(), delim);
-
-    /* Create the string token. */
-    tokens.push_back(std::string(tokenStart, tokenEnd));
-
-    /* Set the start position. */
-    tokenStart = tokenEnd + 1;
-  }
-  while(tokenStart < str.end());
-
-  /* Return the list of tokens. */
-  return tokens;
-}
-
-/******************************************************************************/
-void IPEndPoint::inetPToN4(const std::string & src, uint8_t dst[kIPv4OctetCount])
-{
-  /* Split the IP address into octets. */
-  std::vector<std::string> octets = split(src, '.');
-
-  /* Check there is enough octets. */
-  if(octets.size() != kIPv4OctetCount)
-  {
-    ANUBIS_THROW_RUNTIME_EXCEPTION("An unexpected number of octets have been "
-      "supplied for the IPv4 Address: " << src << ", Octets: " <<
-      octets.size());
-  }
-
-  /* Iterate through each octet. */
-  for(size_t i = 0; i < octets.size(); i++)
-  {
-    /* Convert the current octet string to an octet. */
-    dst[i] = static_cast<uint8_t>(std::stoi(octets[i]));
-  }
-}
-
-/******************************************************************************/
-void IPEndPoint::inetPToN6(const std::string & src,
-                           uint8_t dst[kIPv6OctetCount])
-{
-  /* Split the IP address into shorts. */
-  std::vector<std::string> valueStrs = split(src, ':');
-
-  /* Make sure there is atleast one token in the list so the maths work without
-   * crashing. */
-  if(valueStrs.begin() == valueStrs.end())
-  {
-    ANUBIS_THROW_RUNTIME_EXCEPTION("Invalid IPv6 Address specified: " << src);
-  }
-
-  /* Check for a leading or tailing :: which signifies 0 value shriking. If
-   * the :: exist at either the start or the end of the IP string then it will
-   * result in two empty tokens being generated. Since I'm using an empty token
-   * to indicate the position of the ::, the extra empty token must be dropped.
-   * Since a single : can never exist by itself at the start or the end of the
-   * IPv6 string, this is safe to do. */
-  if((valueStrs.begin())->length() == 0)
-  {
-    valueStrs.erase(valueStrs.begin());
-  }
-  else if((valueStrs.end() - 1)->length() == 0)
-  {
-    valueStrs.erase(valueStrs.end() - 1);
-  }
-
-  /* Zero the memory of the address fields. */
-  memset(dst, 0, kIPv6OctetCount);
-
-  /* The current address byte to write. */
-  size_t curByte = 0;
-
-  /* Populate the memory. */
-  for(auto valueStr : valueStrs)
-  {
-    /* Check if the current string is not empty. */
-    if(valueStr.length() > 0)
-    {
-      /* Calculate the value of the short. */
-      uint16_t value = static_cast<uint16_t>(std::stoi(valueStr, 0, 16));
-
-      /* Write the high byte of the short. */
-      dst[curByte++] = Common::Memory::getByte(1, value);
-
-      /* Write the low byte of the short. */
-      dst[curByte++] = Common::Memory::getByte(0, value);
-    }
-    else
-    {
-      /* Calculate the number of shorts that were shrunk. */
-      curByte += sizeof(uint16_t) * (kIPv6ShortsCount - (valueStrs.size() - 1));
-    }
-  }
-}
-
-/******************************************************************************/
-IPEndPoint IPEndPoint::makeIPv4(uint16_t port, const std::string &addr)
-{
-  /* The IPAddress object that will be returned. */
-  IPEndPoint ipAddr;
-
-  /* Create the data for the address. */
-  ipAddr.fDataLen = sizeof(sockaddr_in);
-  ipAddr.fData = std::unique_ptr<uint8_t[]>(new uint8_t[ipAddr.fDataLen]);
-
-  /* Get a reference to the memory. */
-  sockaddr_in * sockAddr = reinterpret_cast<sockaddr_in*>(ipAddr.fData.get());
-
-  /* Set the fields of the address. */
-  sockAddr->sin_family = htons(AF_INET);
-  sockAddr->sin_port = htons(port);
-
-  /* Check if an interface address has been specified. */
-  if(addr.length())
-  {
-    /* Use the specified interface. */
-    inetPToN4(addr, reinterpret_cast<uint8_t*>(&(sockAddr->sin_addr.s_addr)));
-  }
-  else
-  {
-    /* Use what ever interface the OS selects. */
-    sockAddr->sin_addr.s_addr = INADDR_ANY;
-  }
-
-  /* Return the created address. */
-  return ipAddr;
-}
-
-/******************************************************************************/
-IPEndPoint IPEndPoint::makeIPv6(uint16_t port, const std::string &addr)
-{
-  /* The IPAddress object that will be returned. */
-  IPEndPoint ipAddr;
-
-  /* Create the data for the address. */
-  ipAddr.fDataLen = sizeof(sockaddr_in6);
-  ipAddr.fData = std::unique_ptr<uint8_t[]>(new uint8_t[sizeof(sockaddr_in6)]);
-
-  /* Get a reference to the memory. */
-  sockaddr_in6 * sockAddr = reinterpret_cast<sockaddr_in6*>(ipAddr.fData.get());
-
-  /* Clear all the fields. */
-  memset(sockAddr, 0, sizeof(sockaddr_in6));
-
-  /* Set the common fields. */
-  sockAddr->sin6_family = htons(AF_INET6);
-  sockAddr->sin6_port = htons(port);
-
-  /* Check if an address is specified. */
-  if(addr.length())
-  {
-    /* Set the IPv6 address. */
-    inetPToN6(addr, reinterpret_cast<uint8_t*>(sockAddr->sin6_addr.s6_addr));
-  }
-
-  /* Return the created address. */
-  return ipAddr;
-}
+IPEndPoint::~IPEndPoint() = default;
 
 /******************************************************************************/
 IPEndPoint & IPEndPoint::operator = (const IPEndPoint & rhs)
 {
-  /** Indicate if the the IP address is a v4 address or not. */
-  fIsV4 = rhs.fIsV4;
-  fDataLen = rhs.fDataLen;
+  /* Copy the node name. */
+  fData->fNodeName = rhs.fData->fNodeName;
+
+  /* Set the data length. */
+  fData->fAddrDataLen = rhs.fData->fAddrDataLen;
 
   /* Create the memory for the address object. */
-  fData = std::unique_ptr<uint8_t[]>(new uint8_t[fDataLen]);
+  fData->fAddrData = std::unique_ptr<uint8_t[]>(
+        new uint8_t[fData->fAddrDataLen]);
 
   /* Copy the address structure. */
-  memcpy(fData.get(), rhs.fData.get(), fDataLen);
+  memcpy(fData->fAddrData.get(), rhs.fData->fAddrData.get(),
+         fData->fAddrDataLen);
 
   /* Return the reference to this object. */
   return *this;
 }
 
 /******************************************************************************/
+const uint8_t * IPEndPoint::addrData() const
+{
+  return fData->fAddrData.get();
+}
+
+/******************************************************************************/
+const size_t IPEndPoint::addrDataLen() const
+{
+  return fData->fAddrDataLen;
+}
+
+/******************************************************************************/
 bool IPEndPoint::isIPv4() const
 {
   /* Check to see if the family type is IPv4. */
-  return Memory::fromBigEndian<uint16_t>(fData.get(), fDataLen) == AF_INET;
+  return Memory::fromBigEndian<uint16_t>(fData->fAddrData.get(),
+                                         fData->fAddrDataLen) == AF_INET;
 }
 
 /******************************************************************************/
 bool IPEndPoint::isIPv6() const
 {
   /* Check to see if the family type is IPv6. */
-  return Memory::fromBigEndian<uint16_t>(fData.get(), fDataLen) == AF_INET6;
+  return Memory::fromBigEndian<uint16_t>(fData->fAddrData.get(),
+                                         fData->fAddrDataLen) == AF_INET6;
 }
 
 /******************************************************************************/
-std::string IPEndPoint::ipStr() const
+std::string IPEndPoint::nodeName() const
+{
+  return fData->fNodeName;
+}
+
+/******************************************************************************/
+uint16_t IPEndPoint::port() const
+{
+  return Memory::fromBigEndian<uint16_t>(
+        fData->fAddrData.get() + sizeof(uint16_t),
+        fData->fAddrDataLen);
+}
+
+/******************************************************************************/
+std::string IPEndPoint::ip() const
 {
   /* Create a string stream.*/
   std::stringstream ss;
@@ -373,7 +355,8 @@ std::string IPEndPoint::ipStr() const
   if(isIPv4())
   {
     /* Convert to the right socket type to get the right address index. */
-    sockaddr_in * sockAddr = reinterpret_cast<sockaddr_in*>(fData.get());
+    sockaddr_in * sockAddr = reinterpret_cast<sockaddr_in*>
+        (fData->fAddrData.get());
 
     /* Print the address to a string. */
     ss << (unsigned int)(sockAddr->sin_addr.S_un.S_un_b.s_b1) << "." <<
@@ -384,7 +367,8 @@ std::string IPEndPoint::ipStr() const
   else
   {
     /* Convert to the right socket type to get the right address index. */
-    sockaddr_in6 * sockAddr = reinterpret_cast<sockaddr_in6*>(fData.get());
+    sockaddr_in6 * sockAddr = reinterpret_cast<sockaddr_in6*>
+        (fData->fAddrData.get());
 
     /* Create a vector of the shorts. */
     std::vector<uint16_t> shorts;
@@ -395,13 +379,13 @@ std::string IPEndPoint::ipStr() const
     }
 
     /* Find the longest range of 0's. */
-    int zerosStart = kIPv6ShortsCount, zerosEnd = kIPv6ShortsCount;
+    size_t zerosStart = kIPv6ShortsCount, zerosEnd = kIPv6ShortsCount;
 
     /* Iterate through all the shorts in the address. */
-    for(int i = 0; i < shorts.size(); i++)
+    for(size_t i = 0; i < shorts.size(); i++)
     {
       /* Get a temporary start and end position from the current index. */
-      int tempZeroStart = i, tempZeroEnd = i;
+      size_t tempZeroStart = i, tempZeroEnd = i;
 
       /* Check if the value is zero. */
       if(shorts[i] == 0)
@@ -424,7 +408,7 @@ std::string IPEndPoint::ipStr() const
     }
 
     /* Write the IP address string. */
-    for(int i = 0; i < shorts.size(); i++)
+    for(size_t i = 0; i < shorts.size(); i++)
     {
       /* Check if index is in the shrink range. */
       if(i >= zerosStart && i <= zerosEnd)
@@ -455,9 +439,11 @@ std::string IPEndPoint::ipStr() const
 }
 
 /******************************************************************************/
-std::ostream & operator << (std::ostream & os, const IPEndPoint & ipAddr)
+std::ostream & operator << (std::ostream & os, const IPEndPoint & ep)
 {
   /* Check if it's an IPv4 Address. */
-  os << ipAddr.ipStr();
+  os << ep.nodeName() << "(" << ep.ip() << ") : " << ep.port();
+
+  /* Return the reference to the output stream. */
   return os;
 }
