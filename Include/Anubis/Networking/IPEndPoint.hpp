@@ -15,7 +15,7 @@ namespace Anubis
      * A class for containing the address information of an IP End Point. The
      * class can accept IPv4, IPv6 and DNS addresses directly.
      **************************************************************************/
-    class IPEndPoint
+    class IPEndPoint final
     {
       /** Make the socket class a friend of the IPEndPoint. This is mostly
        * reduce the public interface that is available to developers (otherwise

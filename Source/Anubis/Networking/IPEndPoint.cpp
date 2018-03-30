@@ -5,7 +5,7 @@ using namespace Anubis::Common;
 using namespace Anubis::Networking;
 
 /******************************************************************************/
-struct Anubis::Networking::IPEndPoint::Data
+struct Anubis::Networking::IPEndPoint::Data final
 {
   /* Lock to control access to the WSAStartup function. I'm not sure if this is
    * required but there seems to be no explicit statement about thread safety,
@@ -26,11 +26,39 @@ struct Anubis::Networking::IPEndPoint::Data
   /** The length of the data. */
   size_t fAddrDataLen;
 
+  /*************************************************************************//**
+   * Initialise the winsock library.
+   ****************************************************************************/
   Data();
+
+  /*************************************************************************//**
+   * Shutdown the winsock library.
+   ****************************************************************************/
   ~Data();
 
+  /*************************************************************************//**
+   * Build the the endpoint data for an IPv4 address.
+   * @param src   The address structur from which to copy the IPv4 address.
+   * @param port  The port number to use for the end point.
+   ****************************************************************************/
   void buildV4Addr(const sockaddr_in * src, uint16_t port);
+
+  /*************************************************************************//**
+   * Build the the endpoint data for an IPv6 address.
+   *
+   * @param src   The address structur from which to copy the IPv6 address.
+   * @param port  The port number to use for the end point.
+   ****************************************************************************/
   void buildV6Addr(const sockaddr_in6 * src, uint16_t port);
+
+  /*************************************************************************//**
+   * This function only exist to make the getaddrinf() function raii safe.
+   *
+   * @param nodeName  The node name for which the address information must be
+   *                  obtained.
+   * @return          If an error occured nullptr, else !nullptr.
+   ****************************************************************************/
+  static struct addrinfo * getAddrInfo(const std::string & nodeName);
 };
 
 std::mutex Anubis::Networking::IPEndPoint::Data::fWSAMutex;
@@ -121,20 +149,13 @@ void IPEndPoint::Data::buildV6Addr(const sockaddr_in6 * src, uint16_t port)
 }
 
 /******************************************************************************/
-IPEndPoint::IPEndPoint(uint16_t port, const std::string & nodeName,
-  Preferences pref) : fData(nullptr)
+struct addrinfo * IPEndPoint::Data::getAddrInfo(const std::string & nodeName)
 {
-  /* Create the data object. */
-  fData = std::make_unique<Data>();
-
-  /* Save the node name. */
-  fData->fNodeName = nodeName;
-
   /* The hints to pass for address information lookup. */
   struct addrinfo hints;
 
   /* The result from the address info lookup. */
-  struct addrinfo *result = nullptr;
+  struct addrinfo * result = nullptr;
 
   /* Clear the hints object. */
   memset(&hints, 0, sizeof(struct addrinfo));
@@ -152,6 +173,24 @@ IPEndPoint::IPEndPoint(uint16_t port, const std::string & nodeName,
                                    ret);
   }
 
+  /* Return the results pointer. */
+  return result;
+}
+
+/******************************************************************************/
+IPEndPoint::IPEndPoint(uint16_t port, const std::string & nodeName,
+  Preferences pref) : fData(nullptr)
+{
+  /* Create the data object. */
+  fData = std::make_unique<Data>();
+
+  /* Save the node name. */
+  fData->fNodeName = nodeName;
+
+  /* Get a list of suitable addresses for the node name. */
+  std::unique_ptr<struct addrinfo, decltype(&freeaddrinfo)> results(
+        Data::getAddrInfo(nodeName), freeaddrinfo);
+
   /* The first IPv4 address that was found. */
   struct addrinfo * addrInfoIPv4 = nullptr;
 
@@ -160,7 +199,7 @@ IPEndPoint::IPEndPoint(uint16_t port, const std::string & nodeName,
 
   /* Iterate through the linked list of results until both an IPv4 and IPV6
    * dress has been found or we run out of results. */
-  for(struct addrinfo * curResult = result;
+  for(struct addrinfo * curResult = results.get();
       curResult && (!addrInfoIPv4 || !addrInfoIPv6);
       curResult = curResult->ai_next)
   {
@@ -186,9 +225,6 @@ IPEndPoint::IPEndPoint(uint16_t port, const std::string & nodeName,
   /* The best address to use. */
   struct addrinfo * bestAdrInfo = nullptr;
 
-  /* The address family to use. */
-  uint16_t family;
-
   /* Check if there is IPv4 data. */
   if(addrInfoIPv4)
   {
@@ -196,7 +232,6 @@ IPEndPoint::IPEndPoint(uint16_t port, const std::string & nodeName,
     if(pref == Preferences::IPv4Only || pref == Preferences::IPv4 ||
        pref == Preferences::Any)
     {
-      family = AF_INET;
       bestAdrInfo = addrInfoIPv4;
     }
   }
@@ -209,14 +244,12 @@ IPEndPoint::IPEndPoint(uint16_t port, const std::string & nodeName,
        (pref == Preferences::IPv6Only || pref == Preferences::IPv6 ||
         pref == Preferences::IPv4 || pref == Preferences::Any))
     {
-      family = AF_INET6;
       bestAdrInfo = addrInfoIPv6;
     }
   }
   /* Check if an IPv4 address can be used instead of an IPv6 address. */
   else if(!bestAdrInfo && pref != Preferences::IPv6Only)
   {
-    family = AF_INET;
     bestAdrInfo = addrInfoIPv4;
   }
 
@@ -246,9 +279,6 @@ IPEndPoint::IPEndPoint(uint16_t port, const std::string & nodeName,
                          (bestAdrInfo->ai_addr), port);
     }
   }
-
-  /* Free the queue. */
-  freeaddrinfo(result);
 
   /* Check if any results were found. */
   if(bestAdrInfo == nullptr)
