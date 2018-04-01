@@ -121,6 +121,8 @@ set(AnubisCommon_HEADERS
   Include/Anubis/Common/SubObj.hpp
   Include/Anubis/Common/System.hpp
   Include/Anubis/Common/UUID.hpp
+
+  Include/Anubis/Common/System/SocketWrapper.hpp
 )
 
 set(AnubisCommon_SOURCES
@@ -129,6 +131,8 @@ set(AnubisCommon_SOURCES
   Source/Anubis/Common/Float.cpp
   Source/Anubis/Common/Log.cpp
   Source/Anubis/Common/UUID.cpp
+
+  Source/Anubis/Common/System/SocketWrapper.cpp
 )
 
 # The Simulation Library header and source files.
@@ -292,7 +296,8 @@ endif()
 # Build the examples.
 if(ANUBIS_BUILD_EXAMPLES)
   add_subdirectory("Examples/Example 1 - Simple Rendering")
-  add_subdirectory("Examples/Example 2  - Simple TCP Comms")
+  add_subdirectory("Examples/Example 2 - Simple TCP Comms")
+  add_subdirectory("Examples/Example 3 - Simple UDP Comms")
 endif()
 
 # Build the unit tests.

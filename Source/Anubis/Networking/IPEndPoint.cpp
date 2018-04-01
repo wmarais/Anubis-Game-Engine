@@ -1,5 +1,6 @@
 #include "../../../Include/Anubis/Common/System.hpp"
 #include "../../../Include/Anubis/Networking/IPEndPoint.hpp"
+#include "../../../Include/Anubis/Common/System/SocketWrapper.hpp"
 
 using namespace Anubis::Common;
 using namespace Anubis::Networking;
@@ -7,14 +8,9 @@ using namespace Anubis::Networking;
 /******************************************************************************/
 struct Anubis::Networking::IPEndPoint::Data final
 {
-  /* Lock to control access to the WSAStartup function. I'm not sure if this is
-   * required but there seems to be no explicit statement about thread safety,
-   * so not taking any chances. */
-  static std::mutex fWSAMutex;
-
   /** The result of the winsock startup. For every succesful startup there
    * must be a cleanup. */
-  int fWSAStartupResult;
+  bool fSockLibStarted;
 
   /** The node name that was supplied. This can be diffirent to the IP address
    * that is used. I.e. if a dns name was specified. */
@@ -26,10 +22,23 @@ struct Anubis::Networking::IPEndPoint::Data final
   /** The length of the data. */
   size_t fAddrDataLen;
 
+  /** Delete the assignment operator to always force the user of the copy
+   * constructor. */
+  Data & operator = (const Data & rhs) = delete;
+
   /*************************************************************************//**
    * Initialise the winsock library.
    ****************************************************************************/
   Data();
+
+  Data(const sockaddr * sockAddr, size_t len);
+
+  /*************************************************************************//**
+   * Initialise the winsock library and copy the data from the cp object.
+   *
+   * @param cp  The data object to copy from.
+   ****************************************************************************/
+  Data(const Data & cp);
 
   /*************************************************************************//**
    * Shutdown the winsock library.
@@ -62,38 +71,93 @@ struct Anubis::Networking::IPEndPoint::Data final
   static struct addrinfo * getAddrInfo(const std::string & nodeName);
 };
 
-std::mutex Anubis::Networking::IPEndPoint::Data::fWSAMutex;
+/******************************************************************************/
+IPEndPoint::Data::Data() : fSockLibStarted(false), fAddrDataLen(0)
+{
+  /* Start the sockets library. */
+  Anubis::System::startSocketLib();
+
+  /* Mark the socket library as started. */
+  fSockLibStarted = true;
+}
 
 /******************************************************************************/
-IPEndPoint::Data::Data() : fWSAStartupResult(-1), fAddrDataLen(0)
+IPEndPoint::Data::Data(const struct sockaddr * sockAddr, size_t len) :
+  fSockLibStarted(false), fAddrDataLen(0)
 {
-  /* Lock the WSA access mutex. */
-  std::lock_guard<std::mutex> lock(fWSAMutex);
+  /* Start the sockets library. */
+  Anubis::System::startSocketLib();
 
-  /* Startup winsock and save the result. */
-  WSADATA wsa;
-  fWSAStartupResult = WSAStartup(MAKEWORD(2,2), &wsa);
+  /* Mark the socket library as started. */
+  fSockLibStarted = true;
 
-  /* Check if the sockets library was started properly. */
-  if(fWSAStartupResult != 0)
+  /* Calculate the expected length of the socket data. */
+  fAddrDataLen = sockAddr->sa_family == AF_INET ? sizeof(struct sockaddr_in) :
+                                                  sizeof(struct sockaddr_in6);
+
+  /* Make sure the expected data length match. */
+  if(fAddrDataLen != len)
   {
-    ANUBIS_THROW_RUNTIME_EXCEPTION("WSAStartup failed with error code: " <<
-                                   fWSAStartupResult);
+    ANUBIS_THROW_RUNTIME_EXCEPTION("Expected address data length ("
+    << fAddrDataLen << ") does not match supplied data length " << len << ".");
+  }
+
+  /* Create the address data memory. */
+  fAddrData = std::unique_ptr<uint8_t[]>(new uint8_t[fAddrDataLen]);
+
+  /* Copy the address data. */
+  std::memcpy(fAddrData.get(), sockAddr, fAddrDataLen);
+}
+
+/******************************************************************************/
+IPEndPoint::Data::Data(const Data & cp) : fSockLibStarted(false),
+  fAddrDataLen(0)
+{
+  /* The Winsock Initialise must run again so we dont up in a situation where
+   * the original EndPoint object has been destroyed therby reducing the
+   * reference count to 0 and then destroying Winsock. */
+
+  /* Start the sockets library. */
+  Anubis::System::startSocketLib();
+
+  /* Mark the socket library as started. */
+  fSockLibStarted = true;
+
+  /* Copy the node name. */
+  fNodeName = cp.fNodeName;
+
+  /* Copy the data. */
+  fAddrDataLen = cp.fAddrDataLen;
+
+  /* Copy the address data only if there is any. */
+  if(fAddrDataLen > 0)
+  {
+    /* Create the address data memory. */
+    fAddrData = std::unique_ptr<uint8_t[]>(new uint8_t[fAddrDataLen]);
+
+    /* Copy the address data. */
+    std::memcpy(fAddrData.get(), cp.fAddrData.get(), fAddrDataLen);
   }
 }
 
 /******************************************************************************/
 IPEndPoint::Data::~Data()
 {
-  /* Lock the WSA access mutex. */
-  std::lock_guard<std::mutex> lock(fWSAMutex);
-
-  /* Check if the data object was created and that the sockets library was
-   * successfully initialised. */
-  if(fWSAStartupResult == 0)
+  try
   {
-    /* Clean up the sockets library. */
-    WSACleanup();
+    /* If the library was initialised, the terminate it. */
+    if(fSockLibStarted)
+    {
+      /* Stop the network library. */
+      Anubis::System::stopSocketLib();
+
+      /* Mark the library as stopped. */
+      fSockLibStarted = false;
+    }
+  }
+  catch(std::exception & ex)
+  {
+    ANUBIS_LOG_ERROR(ex.what());
   }
 }
 
@@ -182,13 +246,8 @@ struct addrinfo * IPEndPoint::Data::getAddrInfo(const std::string & nodeName)
 IPEndPoint::IPEndPoint(void * addrData, size_t dataLen)
 {
   /* Create the data object. */
-  fData = std::make_unique<Data>();
-
-  /* Create the memory for the addr data. */
-  fData->fAddrData = std::unique_ptr<uint8_t[]>(new uint8_t[dataLen]);
-
-  /* Copy the address data. */
-  memcpy(fData->fAddrData.get(), addrData, dataLen);
+  fData = std::make_unique<Data>(reinterpret_cast<struct sockaddr*>(addrData),
+                                 dataLen);
 }
 
 /******************************************************************************/
@@ -305,22 +364,8 @@ IPEndPoint::IPEndPoint(uint16_t port, const std::string & nodeName,
 /******************************************************************************/
 IPEndPoint::IPEndPoint(const IPEndPoint & cp)
 {
-  /* Create the data object. */
-  fData = std::make_unique<Data>();
-
-  /* Copy the node name. */
-  fData->fNodeName = cp.fData->fNodeName;
-
-  /* Set the data length. */
-  fData->fAddrDataLen = cp.fData->fAddrDataLen;
-
-  /* Create the memory for the address object. */
-  fData->fAddrData = std::unique_ptr<uint8_t[]>(
-        new uint8_t[fData->fAddrDataLen]);
-
-  /* Copy the address structure. */
-  memcpy(fData->fAddrData.get(), cp.fData->fAddrData.get(),
-         fData->fAddrDataLen);
+  /* Create the data object and copy it from cp. */
+  fData = std::make_unique<Data>(*(cp.fData.get()));
 }
 
 /******************************************************************************/
@@ -329,19 +374,8 @@ IPEndPoint::~IPEndPoint() = default;
 /******************************************************************************/
 IPEndPoint & IPEndPoint::operator = (const IPEndPoint & rhs)
 {
-  /* Copy the node name. */
-  fData->fNodeName = rhs.fData->fNodeName;
-
-  /* Set the data length. */
-  fData->fAddrDataLen = rhs.fData->fAddrDataLen;
-
-  /* Create the memory for the address object. */
-  fData->fAddrData = std::unique_ptr<uint8_t[]>(
-        new uint8_t[fData->fAddrDataLen]);
-
-  /* Copy the address structure. */
-  memcpy(fData->fAddrData.get(), rhs.fData->fAddrData.get(),
-         fData->fAddrDataLen);
+  /* Create the data object and copy the data. */
+  fData = std::make_unique<Data>(*(rhs.fData.get()));
 
   /* Return the reference to this object. */
   return *this;
@@ -362,17 +396,23 @@ const size_t IPEndPoint::addrDataLen() const
 /******************************************************************************/
 bool IPEndPoint::isIPv4() const
 {
+  /* Get a pointer to the address information. */
+  struct sockaddr * addr = reinterpret_cast<struct sockaddr*>
+      (fData->fAddrData.get());
+
   /* Check to see if the family type is IPv4. */
-  return Memory::fromBigEndian<uint16_t>(fData->fAddrData.get(),
-                                         fData->fAddrDataLen) == AF_INET;
+  return addr->sa_family == AF_INET;
 }
 
 /******************************************************************************/
 bool IPEndPoint::isIPv6() const
 {
-  /* Check to see if the family type is IPv6. */
-  return Memory::fromBigEndian<uint16_t>(fData->fAddrData.get(),
-                                         fData->fAddrDataLen) == AF_INET6;
+  /* Get a pointer to the address information. */
+  struct sockaddr * addr = reinterpret_cast<struct sockaddr*>
+      (fData->fAddrData.get());
+
+  /* Check to see if the family type is IPv4. */
+  return addr->sa_family == AF_INET;
 }
 
 /******************************************************************************/

@@ -3,8 +3,19 @@
 using namespace Anubis;
 
 /******************************************************************************/
-std::vector<std::string> split(const std::string & str,
-                               const std::string & delims)
+void Anubis::pause()
+{
+  /* Safely write an IO message to cout. */
+  Common::Log::get().write(Common::Log::Levels::IO,
+                           "Press enter to continue ...");
+
+  /* Wait for the user to press enter. */
+  std::cin.get();
+}
+
+/******************************************************************************/
+std::vector<std::string> Anubis::split(const std::string & str,
+                                       const std::string & delims)
 {
   /* The list of tokens to return. */
   std::vector<std::string> tokens;

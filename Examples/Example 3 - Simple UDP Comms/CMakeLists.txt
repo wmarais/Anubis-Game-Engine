@@ -1,0 +1,8 @@
+add_executable(AnubisExample_SimpleUDPCommsServer Server.cpp)
+add_executable(AnubisExample_SimpleUDPCommsClient Client.cpp)
+
+target_link_libraries(AnubisExample_SimpleUDPCommsServer
+  AnubisNetwork AnubisCommon)
+
+target_link_libraries(AnubisExample_SimpleUDPCommsClient
+  AnubisNetwork AnubisCommon)

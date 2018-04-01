@@ -90,16 +90,31 @@ namespace Anubis
 
       bool recv(std::vector<uint8_t> & data, size_t len);
 
-      void sendTo(const IPEndPoint & ep, const std::vector<uint8_t> & data);
+      /*********************************************************************//**
+       * Use by UDP sockets to send a single datagram to a peer specified by
+       * ep.
+       *
+       * @param ep    The end point to send the datagram too.
+       * @param data  The datagram bytes.
+       * @return      True if the datagram was sent, else false if the socket
+       *              was shutdown.
+       ************************************************************************/
+      bool sendTo(const IPEndPoint & ep, const std::vector<uint8_t> & data);
 
-      void recvFrom(IPEndPoint & ep, std::vector<uint8_t> & data,
-                    size_t len);
-
-
-
-
-
-
+      /*********************************************************************//**
+       * Used for UDP sockets to recieve a single whole datagram. It should be
+       * noted that the maxLen paramter must be greater or equal to the size
+       * of the biggest datagram that is expected.
+       *
+       * @param ep      Used to return IPEndPoint of the peer that send the
+       *                datagram that was recieved.
+       * @param data    The datagram that was recieved.
+       * @param maxLen  The maximum datagram size that can be recieved.
+       * @return        True if a datagram was recieved, else false if the
+       *                socket was shutdown.
+       ************************************************************************/
+      bool recvFrom(IPEndPoint & ep, std::vector<uint8_t> & data,
+                    size_t maxLen);
     };
   }
 }

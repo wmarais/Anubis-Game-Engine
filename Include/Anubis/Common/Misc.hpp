@@ -35,6 +35,7 @@
   #define ANUBIS_DIR_SEPERATOR  '/'
 #endif /* ANUBIS_OS_WINDOWS */
 
+#define ANUBIS_UNUSED_VAR(var)  ((void)(var))
 
 namespace Anubis
 {

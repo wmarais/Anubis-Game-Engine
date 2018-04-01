@@ -1,4 +1,4 @@
-#include "../../../Include/Anubis/Common/System.hpp"
+#include "../../../Include/Anubis/Common/System/SocketWrapper.hpp"
 #include "../../../Include/Anubis/Networking/Socket.hpp"
 
 using namespace Anubis::Networking;
@@ -6,23 +6,42 @@ using namespace Anubis::Networking;
 /******************************************************************************/
 struct Socket::Data final
 {
+  /** Indicate if this object initialised the socket library. */
+  bool fSockLibStarted;
+
   /** The handle to the socket object. */
   SOCKET fHandle;
 
-  /** Default constructo to intialise the important fields. */
+  /** Default constructor to intialise the important fields. */
   Data(SOCKET handle);
 
   Data(uint16_t family, int type, int protocol);
   ~Data();
+
+  Data(const Data & cp) = delete;
+  Data & operator = (const Data & rhs) = delete;
 };
 
 /******************************************************************************/
-Socket::Data::Data(SOCKET handle) : fHandle(handle) {}
+Socket::Data::Data(SOCKET handle) : fHandle(handle)
+{
+  /* Start the socket library. */
+  Anubis::System::startSocketLib();
+
+  /* Mark the socket library as started. */
+  fSockLibStarted = true;
+}
 
 /******************************************************************************/
 Socket::Data::Data(uint16_t family, int type, int protocol) :
   fHandle(INVALID_SOCKET)
 {
+  /* Start the socket library. */
+  Anubis::System::startSocketLib();
+
+  /* Mark the socket library as started. */
+  fSockLibStarted = true;
+
   /* Create the socket. */
   fHandle = socket(family, type, protocol);
 
@@ -55,6 +74,23 @@ Socket::Data::~Data()
       ANUBIS_LOG_ERROR("closesocket() failed with error code: " <<
                        WSAGetLastError());
     }
+  }
+
+  try
+  {
+    /* If the library was initialised, the terminate it. */
+    if(fSockLibStarted)
+    {
+      /* Stop the network library. */
+      Anubis::System::stopSocketLib();
+
+      /* Mark the library as stopped. */
+      fSockLibStarted = false;
+    }
+  }
+  catch(std::exception & ex)
+  {
+    ANUBIS_LOG_ERROR(ex.what());
   }
 }
 
@@ -157,7 +193,7 @@ bool Socket::connect(const IPEndPoint & ep)
 void Socket::shutdown()
 {
   /* Shutdown the socket. */
-  if(::shutdown(fData->fHandle, SD_BOTH) != 0)
+  if(::shutdown(fData->fHandle, SD_SEND) != 0)
   {
     ANUBIS_THROW_RUNTIME_EXCEPTION("shutdown() failed with error code: " <<
                                    WSAGetLastError());
@@ -250,7 +286,7 @@ bool Socket::recv(std::vector<uint8_t> & data, size_t len)
 }
 
 /******************************************************************************/
-void Socket::sendTo(const IPEndPoint & ep, const std::vector<uint8_t> & data)
+bool Socket::sendTo(const IPEndPoint & ep, const std::vector<uint8_t> & data)
 {
   /* The number of bytes that were sent. */
   size_t bytesSent = 0;
@@ -265,53 +301,69 @@ void Socket::sendTo(const IPEndPoint & ep, const std::vector<uint8_t> & data)
                         reinterpret_cast<const struct sockaddr*>(ep.addrData()),
                         ep.addrDataLen());
 
-    /* Check if and error occured. */
-    if(result < 0)
+    /* Check if some bytes were sent. */
+    if(result > 0)
+    {
+      /* Increment the bytes sent. */
+      bytesSent += result;
+    }
+    /* Else check if the socket was shutdown. */
+    else if(result == 0)
+    {
+      /* Return false to indicate that the socket was shut down. */
+      return false;
+    }
+    /* Else an error occured. */
+    else
     {
       ANUBIS_THROW_RUNTIME_EXCEPTION("sendto() failed with error code: " <<
                                      WSAGetLastError());
     }
-    else
-    {
-      /* Increment the number of bytes sent. */
-      bytesSent += result;
-    }
   }
+
+  /* Return true to indicate that the data was sent. */
+  return true;
 }
 
 /******************************************************************************/
-void Socket::recvFrom(IPEndPoint & ep, std::vector<uint8_t> & data,
-                      size_t len)
+bool Socket::recvFrom(IPEndPoint & ep, std::vector<uint8_t> & data,
+                      size_t maxLen)
 {
-//  /* Resize the buffer based on what was expected to be read. */
-//  data.resize(len);
+  /* A location to store the socket address. */
+  struct sockaddr_storage addrData;
 
-//  /* The length of the address structure. */
-//  int addrLen = addr.addrDataLen();
+  /* The length of the address. */
+  int addrDataLen = sizeof(struct sockaddr_storage);
 
-//  /* Read the bytes. */
-//  int bytesRead = recvfrom(fData->fHandle,
-//                          reinterpret_cast<char*>(data.data()), len, 0,
-//                          reinterpret_cast<struct sockaddr*>(addr.data()),
-//                          &addrLen);
+  /* Resize the buffer based on what was expected to be read. */
+  data.resize(maxLen);
 
-//  /* Check if an error occured. */
-//  if(bytesRead < 0)
-//  {
-//    ANUBIS_THROW_RUNTIME_EXCEPTION("recv() failed with error code: " <<
-//                                   WSAGetLastError());
-//  }
-//  else
-//  {
-//    /* Resize the buffer based on what was read. This should only every be
-//     * called when the socket has been shutdown during a read, at which point
-//     * the bytesRead is expected to be 0. */
-//    data.resize(bytesRead);
+  /* Read the bytes. */
+  int result = recvfrom(fData->fHandle,
+                        reinterpret_cast<char*>(data.data()), data.size(), 0,
+                        reinterpret_cast<struct sockaddr*>(&addrData),
+                        &addrDataLen);
 
-//    /* Verify that the size of the addresses match. */
-//    if(static_cast<size_t>(addrLen) != addr.dataLen())
-//    {
-//      ANUBIS_THROW_RUNTIME_EXCEPTION("Missmatched sockaddr size!");
-//    }
-//  }
+  /* Check if the packet was read. */
+  if(result > 0)
+  {
+    /* Resize the vector. */
+    data.resize(result);
+
+    /* Set the EP where the data came from. */
+    ep = IPEndPoint(&addrData, addrDataLen);
+
+    /* Return true to indicate that the datagram was read. */
+    return true;
+  }
+  /* Else check if it was gracefully shutdown. */
+  else if(result == 0)
+  {
+    /* Return false to indicate the shutdown. */
+    return false;
+  }
+
+  /* Else an error occured. */
+  ANUBIS_THROW_RUNTIME_EXCEPTION("recvfrom() failed with result: " << result
+    << ", error code: " << WSAGetLastError() << ".");
 }

@@ -6,6 +6,11 @@
 namespace Anubis
 {
   /*************************************************************************//**
+   * Pause the execution of a thread until the user presses enter.
+   ****************************************************************************/
+  void pause();
+
+  /*************************************************************************//**
    * Split a string into an array of tokens. This function retains empty tokens
    * between consecutive tokens.
    *

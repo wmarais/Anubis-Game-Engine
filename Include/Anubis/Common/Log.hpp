@@ -51,15 +51,16 @@ namespace Anubis
     class Log final
     {
     public:
-
       /*********************************************************************//**
        * The various log levels that are available to the engine. The engine
        * must be compile to support all log levels for them to be available.
        ************************************************************************/
       enum Levels : int
       {
+        IO = 0,
+
         /** An unrecoverable error or exception that occured. */
-        FatalError = 0,
+        FatalError,
 
         /** A recoverable error or exception that occured. */
         Error,
