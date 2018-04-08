@@ -16,5 +16,6 @@
 #include "Graphics/Renderer.hpp"
 #include "Graphics/Shader.hpp"
 #include "Graphics/ShaderProgram.hpp"
+#include "Graphics/TextRenderer.hpp"
 
 #endif /* ANUBIS_GRAPHICS_HPP */

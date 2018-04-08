@@ -7,6 +7,8 @@ const uint8_t PixelMap::kCompHeader[12] = {0,0,10,0,0,0,0,0,0,0,0,0};
 
 const uint8_t PixelMap::kUncompHeader[12] = {0,0,2,0,0,0,0,0,0,0,0,0};
 
+const size_t PixelMap::kBPP[5] = {1, 3, 4, 3, 4};
+
 /******************************************************************************/
 PixelMap::PixelMap(const std::vector<uint8_t> data)
 {
@@ -25,6 +27,40 @@ PixelMap::PixelMap(const std::vector<uint8_t> data)
   {
     ANUBIS_THROW_RUNTIME_EXCEPTION("Invalid TGA data provided.");
   }
+}
+
+/******************************************************************************/
+PixelMap::PixelMap(size_t width, size_t height, PixelTypes type) :
+  fWidth(width), fHeight(height), fType(type)
+{
+  /* Resize the data vector. */
+  fData.resize(fWidth * fHeight * bpp());
+
+  /* Clear the memory. */
+  memset(fData.data(), 0, fData.size());
+}
+
+/******************************************************************************/
+PixelMap::PixelMap(const uint8_t * data, size_t width, size_t height,
+         PixelTypes type) : fWidth(width), fHeight(height), fType(type)
+{
+
+}
+
+/******************************************************************************/
+PixelMap & PixelMap::operator = (PixelMap && mv)
+{
+  /* Copy the properties. */
+  fType = mv.fType;
+  fWidth = mv.fWidth;
+  fHeight = mv.fHeight;
+  fBPP = mv.fBPP;
+
+  /* Move the data across. */
+  fData = std::move(mv.fData);
+
+  /* Return the reference to this object. */
+  return *this;
 }
 
 /******************************************************************************/
@@ -137,10 +173,95 @@ void PixelMap::loadTGA(const std::vector<uint8_t> & data, bool compressed)
 }
 
 /******************************************************************************/
+std::vector<uint8_t> PixelMap::toTGA() const
+{
+  /* The vector that will be returned. */
+  std::vector<uint8_t> tga;
+
+  /* Resize the vector to accept all the contents of the TGA image. Note that
+   * +6 is for the Width, height and BPP (and one resrve byte). */
+  tga.reserve(sizeof(kUncompHeader) + kTGAHeaderLen + fData.size());
+
+  /* Write the uncompressed TGA header. */
+  memcpy(tga.data(), kUncompHeader, sizeof(kUncompHeader));
+
+  /* Set the current write index. */
+  size_t curIndex = sizeof(kUncompHeader);
+
+  /* Write the width of the image. */
+  writeLE<uint16_t>(tga.data() + curIndex, tga.size() - curIndex, fWidth);
+  curIndex += sizeof(uint16_t);
+
+  /* Write the height of the image. */
+  writeLE<uint16_t>(tga.data() + curIndex, tga.size() - curIndex, fHeight);
+  curIndex += sizeof(uint16_t);
+
+  /* Write the BPP of the image. */
+  *(tga.data() + curIndex) = bpp() * 8;
+  curIndex += sizeof(uint8_t);
+
+  /* Set the reserved byte to 0. */
+  *(tga.data() + curIndex) = 0;
+  curIndex += sizeof(uint8_t);
+
+  /* Check the pixel type. */
+  switch(fType)
+  {
+    /* A grayscale image, BGR and BGRA pixel maps can be directly written out
+     * since they are in the correct order for TGA. */
+    case PixelTypes::Gray:
+    case PixelTypes::BGR:
+    case PixelTypes::BGRA:
+      /* Copy the memory. */
+      memcpy(tga.data() + curIndex, fData.data(), fData.size());
+    break;
+
+    /* RGB and RGBA images need to swap the R and B channels swapped before
+     * being written out. */
+    case PixelTypes::RGB:
+    case PixelTypes::RGBA:
+      ANUBIS_THROW_RUNTIME_EXCEPTION("Functionality not implemented.");
+    break;
+  }
+
+  /* Return the image data. */
+  return tga;
+}
+
+/******************************************************************************/
 PixelMap & PixelMap::changePixelType(PixelTypes & pixelType)
 {
   /* Check if it's the right type alrleady. */
 
+}
+
+/******************************************************************************/
+size_t PixelMap::width() const
+{
+  return fWidth;
+}
+
+/******************************************************************************/
+size_t PixelMap::height() const
+{
+  return fHeight;
+}
+
+/******************************************************************************/
+size_t PixelMap::bpp() const
+{
+  return kBPP[static_cast<uint8_t>(fType)];
+}
+
+/******************************************************************************/
+void PixelMap::resize(size_t width, size_t height)
+{
+  /* Store the new widht and height of the pixle map. */
+  fWidth = width;
+  fHeight = height;
+
+  /* Resize the memory of the pixel map. */
+  fData.resize(fWidth * fHeight * bpp());
 }
 
 

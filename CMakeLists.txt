@@ -18,6 +18,8 @@ find_package(Doxygen)
 find_library(ANUBIS_HAS_RPCRT4 rpcrt4)
 find_library(ANUBIS_HAS_WINSOCK2 ws2_32)
 
+find_package(freetype CONFIG REQUIRED PATH_SUFFIXES "/cmake/freetype")
+
 ################################################################################
 # HOST DETECTION
 ################################################################################
@@ -119,6 +121,7 @@ set(AnubisCommon_HEADERS
   Include/Anubis/Common/Memory.hpp
   Include/Anubis/Common/Misc.hpp
   Include/Anubis/Common/SubObj.hpp
+  Include/Anubis/Common/String.hpp
   Include/Anubis/Common/System.hpp
   Include/Anubis/Common/UUID.hpp
 
@@ -130,6 +133,7 @@ set(AnubisCommon_SOURCES
   Source/Anubis/Common/Barrier.cpp
   Source/Anubis/Common/Float.cpp
   Source/Anubis/Common/Log.cpp
+  Source/Anubis/Common/String.cpp
   Source/Anubis/Common/UUID.cpp
 
   Source/Anubis/Common/System/SocketWrapper.cpp
@@ -169,6 +173,7 @@ if(ANUBIS_BUILD_GRAPHICS)
     Include/Anubis/Graphics/Renderer.hpp
     Include/Anubis/Graphics/Shader.hpp
     Include/Anubis/Graphics/ShaderProgram.hpp
+    Include/Anubis/Graphics/TextRenderer.hpp
   )
 
   set(AnubisGraphics_SOURCES
@@ -185,6 +190,7 @@ if(ANUBIS_BUILD_GRAPHICS)
     Source/Anubis/Graphics/Renderer.cpp
     Source/Anubis/Graphics/Shader.cpp
     Source/Anubis/Graphics/ShaderProgram.cpp
+    Source/Anubis/Graphics/TextRenderer.cpp
   )
 endif()
 
@@ -230,6 +236,7 @@ if(ANUBIS_BUILD_PHYSICS)
     Include/Anubis/Physics.hpp
     Include/Anubis/Physics/BoundingBox.hpp
     Include/Anubis/Physics/BoundingMesh.hpp
+    Include/Anubis/Physics/BoundingRect.hpp
     Include/Anubis/Physics/BoundingSphere.hpp
     Include/Anubis/Physics/BoundingVolume.hpp
     Include/Anubis/Physics/CameraNode.hpp
@@ -272,6 +279,8 @@ endif()
 if(ANUBIS_BUILD_GRAPHICS)
   add_library(AnubisGraphics STATIC ${AnubisGraphics_SOURCES}
     ${AnubisGraphics_HEADERS})
+
+    target_link_libraries(AnubisGraphics freetype)
 endif()
 
 if(ANUBIS_BUILD_NETWORKING)

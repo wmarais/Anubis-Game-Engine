@@ -183,6 +183,9 @@ int main(int argc, char * argv[])
   /* Initialise the scene. */
   gInitScene();
 
+  /* Create a new text renderer. */
+  TextRenderer textRenderer;
+
   /* While the windows is open, keep looping. */
   while (!glfwWindowShouldClose(window))
   {

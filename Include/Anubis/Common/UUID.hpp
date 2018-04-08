@@ -32,6 +32,18 @@ namespace Anubis
        ************************************************************************/
       UUID(bool isNull = false);
 
+      UUID(const UUID & cp)
+      {
+        memcpy(fOctets, cp.fOctets, kOctetCount);
+      }
+
+      UUID & operator = (const UUID & rhs)
+      {
+        memcpy(fOctets, rhs.fOctets, kOctetCount);
+
+        return *this;
+      }
+
       /*********************************************************************//**
        * Comparison operator to check if two UUIDs match.
        *

@@ -26,9 +26,9 @@ namespace Anubis
      * check the status of the thread to determine if the barries must pass
      * the thread so it can shut down properly.
      *
-     * The glaring limitation of this class is that two Barrier objects must
-     * always be used for repeated synchronisations, i.e. like a repeating loops
-     * etc.
+     * @warning The glaring limitation of this class is that two Barrier objects
+     *          must always be used for repeated synchronisations, i.e. like a
+     *          repeating loops etc.
      **************************************************************************/
     class Barrier
     {

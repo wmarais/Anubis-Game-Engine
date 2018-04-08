@@ -25,6 +25,7 @@
 #include <exception>
 #include <condition_variable>
 #include <functional>
+#include <set>
 
 //#define ANUBIS_HAS_SSE
 #define ANUBIS_HOST_IS_LITTLE_ENDIAN
