@@ -20,27 +20,27 @@ struct TextRenderer::Glyph final
   char32_t kCodePoint;
 
   /** The height of the font used to render this glyph. */
-  const size_t fFontHeight;
+  const size_t kFontHeight;
 
   /** The area of the glyph. */
   const float kArea;
 
   /** The width of the glyph. */
-  const float fWidth;
+  const float kWidth;
 
   /** The height of the glyph. */
-  const float fHeight;
+  const float kHeight;
 
   /** The x bearing of the glyph. */
-  const float fBearingX;
+  const float kBearingX;
 
   /** They y bearing of the glyph. */
-  const float fBearingY;
+  const float kBearingY;
 
   /** How far to advance before rendering the next glyph. */
-  const float fAdvanceX;
+  const float kAdvanceX;
 
-  const float fAdvanceY;
+  const float kAdvanceY;
 
   /** The X position of the glyph in the glyph atlas. */
   float fX;
@@ -68,11 +68,18 @@ struct TextRenderer::Glyph final
 
 /******************************************************************************/
 TextRenderer::Glyph::Glyph(uint32_t codePoint, const FT_Face & face,
-  size_t fontHeight) : kCodePoint(codePoint),
-  fFontHeight(fontHeight), kArea(face->glyph->bitmap.width * face->glyph->bitmap.rows), fWidth(face->glyph->bitmap.width),
-  fHeight(face->glyph->bitmap.rows), fBearingX(face->glyph->bitmap_left),
-  fBearingY(face->glyph->bitmap_top), fAdvanceX(face->glyph->advance.x),
-  fAdvanceY(face->glyph->advance.y)
+  size_t fontHeight) :
+  kCodePoint(codePoint),
+  kFontHeight(fontHeight),
+  kArea(face->glyph->bitmap.width * face->glyph->bitmap.rows),
+  kWidth(face->glyph->bitmap.width),
+  kHeight(face->glyph->bitmap.rows),
+  kBearingX(face->glyph->bitmap_left),
+  kBearingY(face->glyph->bitmap_top),
+  kAdvanceX(face->glyph->advance.x),
+  kAdvanceY(face->glyph->advance.y),
+  fX(0.0f),
+  fY(0.0f)
 {
   /* Create and assign the pixel map. */
   fPixelMap = std::make_unique<PixelMap>(face->glyph->bitmap.buffer,
@@ -194,10 +201,6 @@ class TextRenderer::GlyphAtlas final
     /** The glyph inserted at this node. */
     std::shared_ptr<Glyph> fGlyph;
 
-    Node();
-    ~Node();
-
-
     /***********************************************************************//**
      * Check if the current node is a leaf node or not.
      *
@@ -214,7 +217,7 @@ class TextRenderer::GlyphAtlas final
      *                contains a glyph, (2) there is not enough space to fit
      *                the glyph.
      **************************************************************************/
-    bool insert(std::shared_ptr<Glyph> glyph);
+    bool insert(std::shared_ptr<Glyph> glyph, PixelMap &dst);
   };
 
   /** The root node of the binary tree used to packe the glyphs. */
@@ -244,8 +247,8 @@ class TextRenderer::GlyphAtlas final
   /** Indicate if the atlas changed or not. */
   bool fHasChanged;
 
-  /** The pixel map of the atlas. */
-  std::unique_ptr<PixelMap> fPixelMap;
+  /** The list of fonts. */
+  std::vector<std::unique_ptr<Font>> fFonts;
 
   /** Delete the copy constructor. */
   GlyphAtlas(const GlyphAtlas&) = delete;
@@ -265,6 +268,9 @@ class TextRenderer::GlyphAtlas final
   bool contains(char32_t codePoint, size_t fontHeight);
 
 public:
+
+  /** The pixel map of the atlas. */
+  std::unique_ptr<PixelMap> fPixelMap;
 
   /*************************************************************************//**
    * Default constructor to initialise FreeType and created the default glyph
@@ -291,37 +297,32 @@ public:
    * Tightly pack the glyphs into the glyph (texture) atlas.
    ****************************************************************************/
   void pack();
+
+  Font * addFont(const std::string & path, const Common::UUID & uuid);
 };
 
-TextRenderer::GlyphAtlas::Node::Node()
-{
-}
-
-TextRenderer::GlyphAtlas::Node::~Node()
-{
-
-}
-
+/******************************************************************************/
 bool TextRenderer::GlyphAtlas::Node::isLeaf() const
 {
   return fLeft == nullptr && fRight == nullptr;
 }
 
 /******************************************************************************/
-bool TextRenderer::GlyphAtlas::Node::insert(std::shared_ptr<Glyph> glyph)
+bool TextRenderer::GlyphAtlas::Node::insert(std::shared_ptr<Glyph> glyph,
+                                            PixelMap & dst)
 {
   /* Check if this not a leaf node. If it's not then try to insert the glyph
    * into one of the child nodes. */
   if(!isLeaf())
   {
     /* Try to insert into the left node. */
-    bool inserted = fLeft->insert(glyph);
+    bool inserted = fLeft->insert(glyph, dst);
 
     /* Check if it was not inserted on the left. */
     if(!inserted)
     {
       /* Try to insert to the right. */
-      inserted = fRight->insert(glyph);
+      inserted = fRight->insert(glyph, dst);
     }
 
     /* Return the insert status for this node. */
@@ -337,17 +338,24 @@ bool TextRenderer::GlyphAtlas::Node::insert(std::shared_ptr<Glyph> glyph)
   }
 
   /* Check if the glyph will fit into the current rect. */
-  if(!fRect.canFit(BoundingRect(0, 0, fGlyph->fWidth, fGlyph->fHeight)))
+  if(!fRect.canFit(BoundingRect(0, 0, glyph->kWidth, glyph->kHeight)))
   {
     /* Return false to indicate that leaf node does not fit. */
     return false;
   }
 
   /* Check if the new glyph fits perfectly. */
-  if(fRect.width() == glyph->fWidth && fRect.height() == glyph->fHeight)
+  if(fRect.width() == glyph->kWidth && fRect.height() == glyph->kHeight)
   {
     /* Fit the glyph to the node. */
     fGlyph = glyph;
+
+    /* Set the x and y position of the glyph in the atlas. */
+    fGlyph->fX = fRect.x();
+    fGlyph->fY = fRect.y();
+
+    /* Copy the pixel map into the new image. */
+    dst.copyIn(*(fGlyph->fPixelMap.get()), fGlyph->fX, fGlyph->fY);
 
     /* Return true to indicate it was inserted. */
     return true;
@@ -360,34 +368,34 @@ bool TextRenderer::GlyphAtlas::Node::insert(std::shared_ptr<Glyph> glyph)
   fRight = std::make_unique<Node>();
 
   /* Decide which way to split the bounding rect. */
-  size_t dw = fRect.width() - glyph->fWidth;
-  size_t dh = fRect.height() - glyph->fHeight;
+  size_t dw = fRect.width() - glyph->kWidth;
+  size_t dh = fRect.height() - glyph->kHeight;
 
   /* Check if the bounding area must be split vertically. */
   if(dw > dh)
   {
     /* The left node refer to then left bounding rect. */
     fLeft->fRect = BoundingRect(fRect.x(), fRect.y(),
-                                glyph->fWidth, fRect.height());
+                                glyph->kWidth, fRect.height());
 
     /* The right node refer to the right bounding rect. */
-    fRight->fRect = BoundingRect(fRect.x() + glyph->fWidth, fRect.y(),
-                          fRect.width() - glyph->fWidth, fRect.height());
+    fRight->fRect = BoundingRect(fRect.x() + glyph->kWidth, fRect.y(),
+                          fRect.width() - glyph->kWidth, fRect.height());
   }
   /* else split the bounding rect horizontally. */
   else
   {
     /* The left node refers to the top bounding rect. */
     fLeft->fRect = BoundingRect(fRect.x(), fRect.y(),
-                          fRect.width(), fRect.y() + glyph->fHeight);
+                          fRect.width(), glyph->kHeight);
 
     /* The right node refers to the bottom bounding rect. */
-    fRight->fRect = BoundingRect(fRect.x(), fRect.y() + glyph->fHeight,
-                                 fRect.width(), fRect.height());
+    fRight->fRect = BoundingRect(fRect.x(), fRect.y() + glyph->kHeight,
+                          fRect.width(), fRect.height() - glyph->kHeight);
   }
 
   /* Insert into the left node. */
-  return fLeft->insert(glyph);
+  return fLeft->insert(glyph, dst);
 }
 
 /******************************************************************************/
@@ -410,6 +418,9 @@ TextRenderer::GlyphAtlas::GlyphAtlas()
 /******************************************************************************/
 TextRenderer::GlyphAtlas::~GlyphAtlas()
 {
+  /* Clear all the fonts. */
+  fFonts.clear();
+
   /* Close the free type library. */
   FT_Done_FreeType(fFTLibrary);
 }
@@ -434,7 +445,7 @@ bool TextRenderer::GlyphAtlas::contains(char32_t codePoint, size_t fontHeight)
      * there should never be more than one. */
     auto exact = std::find_if(start, end,
       [&fontHeight](const std::shared_ptr<Glyph> & glyph)
-        -> bool { return glyph->fFontHeight == fontHeight; });
+        -> bool { return glyph->kFontHeight == fontHeight; });
 
     /* Check if the exact codepoint and font height has been found. */
     if(exact != fGlyphs.end())
@@ -462,7 +473,7 @@ void TextRenderer::GlyphAtlas::prepare(Font * font, const std::u32string & str,
       std::shared_ptr<Glyph> glyph = font->render(codePoint, fontHeight);
 
       /* Insert the glyph into the set of glyphs sorted by code point. */
-      fGlyphs.insert(std::move(glyph));
+      fGlyphs.insert(glyph);
 
       /* Set the glyph into the vector of glyphs sorted by height. */
       fGlyphsByArea.push_back(glyph);
@@ -482,6 +493,9 @@ void TextRenderer::GlyphAtlas::pack()
     /* No need to rebuild it then. */
     return;
   }
+
+  /* Clear the has changed flag. */
+  fHasChanged = false;
 
   /* Sort the vector in descending order of glyph Area. */
   std::sort(fGlyphsByArea.begin(), fGlyphsByArea.end(),
@@ -513,11 +527,14 @@ void TextRenderer::GlyphAtlas::pack()
     /* Create a new root node. */
     fRoot = std::make_unique<Node>();
 
+    /* Set the new bounding area to match the pixel map. */
+    fRoot->fRect = BoundingRect(0, 0, fPixelMap->width(), fPixelMap->height());
+
     /* Iterate through all the glyphs. */
     for(; curIter != fGlyphsByArea.end(); curIter++)
     {
       /* Check if the glyph was sucessfully packed. */
-      if(fRoot->insert(*curIter) == false)
+      if(fRoot->insert(*curIter, *(fPixelMap.get())) == false)
       {
         /* Break out of the loop since the pixelmap must be resized. */
         break;
@@ -529,6 +546,23 @@ void TextRenderer::GlyphAtlas::pack()
     resDim *= 2;
   }
   while(curIter != fGlyphsByArea.end());
+}
+
+/******************************************************************************/
+TextRenderer::Font * TextRenderer::GlyphAtlas::addFont(const std::string & path,
+                             const Common::UUID & uuid)
+{
+  /* Create the new font. */
+  std::unique_ptr<Font> font = std::make_unique<Font>(fFTLibrary, path, uuid);
+
+  /* Get a reference to the pointer. */
+  Font * ptr = font.get();
+
+  /* Add the font to the list of fonts. */
+  fFonts.push_back(std::move(font));
+
+  /* Return the pointer to the font. */
+  return ptr;
 }
 
 ///******************************************************************************/
@@ -635,22 +669,21 @@ void TextRenderer::GlyphAtlas::pack()
 /******************************************************************************/
 TextRenderer::TextRenderer(size_t cacheLen)
 {
-  /* Create the data object of the text renderer. */
-  //fData = std::make_unique<Data>(cacheLen);
+  /* Create the glyph atlas. */
+  fGlyphAtlas = std::make_unique<GlyphAtlas>();
+}
 
+/******************************************************************************/
+TextRenderer::~TextRenderer()
+{
 
-//  std::vector<GlyphInfo> glyphInfo;
+}
 
-//  /* Iterate through all the rows in the ascii image. */
-//  for(size_t row = 0; row < 16; row++)
-//  {
-//    /* Iterate through all the columns in the ascii image. */
-//    for(size_t col = 0; col < 16; col++)
-//    {
-
-//    }
-//  }
-
+/******************************************************************************/
+TextRenderer::Font * TextRenderer::addFont(const std::string & path,
+               const Common::UUID & uuid)
+{
+  return fGlyphAtlas->addFont(path, uuid);
 }
 
 ///******************************************************************************/
@@ -690,8 +723,8 @@ TextRenderer::TextRenderer(size_t cacheLen)
 //}
 
 /******************************************************************************/
-void TextRenderer::drawTextSimple(const std::string & text, const Font * font,
-  float height, const Colour & colour, const Math::Matrix4f & trans)
+void TextRenderer::drawTextSimple(const std::string & text, Font * font,
+  size_t height, const Colour & colour, const Math::Matrix4f & trans)
 {
   /* The UTF-8 - UTF-32 standard conversion facet. */
   std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> cvt;
@@ -700,4 +733,16 @@ void TextRenderer::drawTextSimple(const std::string & text, const Font * font,
   std::u32string u32Text = cvt.from_bytes(text);
 
   /* Prepare the glyph atlas to render the string. */
+  fGlyphAtlas->prepare(font, u32Text, height);
+
+  /* Pack the atlas. */
+  fGlyphAtlas->pack();
+
+  /* The get the pixel map from the foint atlas. */
+  std::vector<uint8_t> atlasData = fGlyphAtlas->fPixelMap->toTGA();
+
+  /* Conver the glyph atlas to a TGA and save it to file. */
+  FILE * file = fopen("FontAtlas.tga", "w");
+  fwrite(atlasData.data(), sizeof(uint8_t), atlasData.size(), file);
+  fclose(file);
 }

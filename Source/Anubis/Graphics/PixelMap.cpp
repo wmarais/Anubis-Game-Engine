@@ -31,7 +31,7 @@ PixelMap::PixelMap(const std::vector<uint8_t> data)
 
 /******************************************************************************/
 PixelMap::PixelMap(size_t width, size_t height, PixelTypes type) :
-  fWidth(width), fHeight(height), fType(type)
+  fType(type), fWidth(width), fHeight(height)
 {
   /* Resize the data vector. */
   fData.resize(fWidth * fHeight * bpp());
@@ -42,9 +42,13 @@ PixelMap::PixelMap(size_t width, size_t height, PixelTypes type) :
 
 /******************************************************************************/
 PixelMap::PixelMap(const uint8_t * data, size_t width, size_t height,
-         PixelTypes type) : fWidth(width), fHeight(height), fType(type)
+         PixelTypes type) : fType(type), fWidth(width), fHeight(height)
 {
+  /* Allocate the memory for the pixels. */
+  fData.resize(fWidth * fHeight * bpp());
 
+  /* Copy the pixels across. */
+  memcpy(fData.data(), data, fData.size());
 }
 
 /******************************************************************************/
@@ -180,7 +184,7 @@ std::vector<uint8_t> PixelMap::toTGA() const
 
   /* Resize the vector to accept all the contents of the TGA image. Note that
    * +6 is for the Width, height and BPP (and one resrve byte). */
-  tga.reserve(sizeof(kUncompHeader) + kTGAHeaderLen + fData.size());
+  tga.resize(sizeof(kUncompHeader) + kTGAHeaderLen + fData.size());
 
   /* Write the uncompressed TGA header. */
   memcpy(tga.data(), kUncompHeader, sizeof(kUncompHeader));
@@ -228,11 +232,17 @@ std::vector<uint8_t> PixelMap::toTGA() const
   return tga;
 }
 
-/******************************************************************************/
-PixelMap & PixelMap::changePixelType(PixelTypes & pixelType)
-{
-  /* Check if it's the right type alrleady. */
+///******************************************************************************/
+//PixelMap & PixelMap::changePixelType(PixelTypes & pixelType)
+//{
+//  /* Check if it's the right type alrleady. */
 
+//}
+
+/******************************************************************************/
+PixelMap::PixelTypes PixelMap::pixelType() const
+{
+  return fType;
 }
 
 /******************************************************************************/
@@ -254,6 +264,11 @@ size_t PixelMap::bpp() const
 }
 
 /******************************************************************************/
+size_t PixelMap::stride() const
+{
+  return fWidth * bpp();
+}
+/******************************************************************************/
 void PixelMap::resize(size_t width, size_t height)
 {
   /* Store the new widht and height of the pixle map. */
@@ -262,6 +277,45 @@ void PixelMap::resize(size_t width, size_t height)
 
   /* Resize the memory of the pixel map. */
   fData.resize(fWidth * fHeight * bpp());
+}
+
+/******************************************************************************/
+void PixelMap::copyIn(const PixelMap & src, size_t dstX, size_t dstY)
+{
+  /* Check if the types match. */
+  if(src.pixelType() != fType)
+  {
+    ANUBIS_THROW_RUNTIME_EXCEPTION("Pixel type mismatch.");
+  }
+
+  /* Check the coordinates are in range. */
+  if(dstX >= fWidth || dstY >= fHeight)
+  {
+    /* Nothing to copy, just return. */
+    return;
+  }
+
+  /* Calculate the maximum width to copy. */
+  size_t cpWidth = src.width(); /*dstX + src.width() <= fWidth ? src.width() :
+                    src.width() - (dstX + src.width() - fWidth);*/
+
+  /* Calculate the maximum height to copy. */
+  size_t cpHeight = src.height(); /*dstY + src.height() <= fHeight ? src.height() :
+                    src.height() - (dstY + src.height() - fHeight);*/
+
+  /* Iterate through all the rows and copy them line-by-line. */
+  for(size_t r = 0; r < cpHeight; r++)
+  {
+    /* Calculate the source position to copy from. */
+    size_t srcPos = r * src.width() * src.bpp();
+
+    /* Calculate the destination to copy too. */
+    size_t dstPos = (dstY + r) * stride() + (dstX * bpp());
+
+    /* Copy the colums of each row. */
+    memcpy(fData.data() + dstPos, src.fData.data() + srcPos, cpWidth * bpp());
+  }
+
 }
 
 

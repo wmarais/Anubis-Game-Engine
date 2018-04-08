@@ -186,6 +186,14 @@ int main(int argc, char * argv[])
   /* Create a new text renderer. */
   TextRenderer textRenderer;
 
+  /* Load the font. */
+  TextRenderer::Font * font = textRenderer.addFont("Font/Actor-Regular.ttf");
+
+  /* Render a simple string. */
+  textRenderer.drawTextSimple(u8"12345",
+                              font, 100, Colour(0, 0, 0, 0), Matrix4f());
+
+
   /* While the windows is open, keep looping. */
   while (!glfwWindowShouldClose(window))
   {

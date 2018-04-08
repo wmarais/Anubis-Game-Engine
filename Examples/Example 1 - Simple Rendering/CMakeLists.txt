@@ -19,3 +19,5 @@ add_executable(AnubisExample_SimpleRendering
 
 target_link_libraries(AnubisExample_SimpleRendering AnubisSimulation AnubisGraphics AnubisCommon
   AnubisMaths glfw)
+
+file(COPY "Font" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")

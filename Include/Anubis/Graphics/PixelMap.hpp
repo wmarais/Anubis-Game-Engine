@@ -78,13 +78,27 @@ namespace Anubis
        * @param type
        * @return
        ************************************************************************/
-      PixelMap & changePixelType(PixelTypes & pixelType);
+//      PixelMap & changePixelType(PixelTypes & pixelType);
 
       size_t width() const;
       size_t height() const;
       size_t bpp() const;
 
+      size_t stride() const;
+
       void resize(size_t width, size_t height);
+
+      /*********************************************************************//**
+       * Copy the whole src pixel map into this pixel map at dstX and dstY. If
+       * the dstX + src.width() exceeds the margins of this pixel map, only the
+       * contents that fit will be copied. The pixel types must match else an
+       * exception will be thrown.
+       *
+       * @param src   The pixel map to copy from.
+       * @param dstX  The destination X position to copy too.
+       * @param dstY  The destination Y position to copy too.
+       ************************************************************************/
+      void copyIn(const PixelMap & src, size_t dstX, size_t dstY);
 
       /*********************************************************************//**
        * Create a TGA image file from the bitmap contents.

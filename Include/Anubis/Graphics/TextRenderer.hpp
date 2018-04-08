@@ -42,6 +42,8 @@ namespace Anubis
        ************************************************************************/
       TextRenderer(size_t cacheLen = 256);
 
+      ~TextRenderer();
+
       /*********************************************************************//**
        * Add the font at the specified path to the text renderer and return a
        * pointer to the created font. Note the user must not delete manually
@@ -69,8 +71,8 @@ namespace Anubis
                     const Colour & colour, const Math::Matrix4f & trans);
 
 
-      void drawTextSimple(const std::string & text, const Font * font,
-                          float height, const Colour & colour,
+      void drawTextSimple(const std::string & text, Font *font,
+                          size_t height, const Colour & colour,
                           const Math::Matrix4f & trans);
     };
   }
