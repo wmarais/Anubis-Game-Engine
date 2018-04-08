@@ -172,16 +172,14 @@ std::shared_ptr<TextRenderer::Glyph> TextRenderer::Font::render(
 ##############################################################################*/
 class TextRenderer::GlyphAtlas final
 {
-  static const size_t kDefaultDim; // = 512;
+  /** The default starting dimensions of the pixel map. */
+  static const size_t kDefaultDim = 512;
 
+  /** The maximum with and height of the atlas pixel map. This is tuned to work
+   * with most video cards. */
   static const size_t kMaxDim = 8192;
 
-  /** The minimum power of two to use when rezising the atlas pixel map. */
-  static const size_t kMinPowerTwo = 9;
-
-  /** The maximum power of two to use when resizing the atlas pixel map. */
-  static const size_t kMaxPowerTwo = 13;
-
+  /** The node that forms the binary tree used for packing the glyph. */
   struct Node
   {
     /** The left child of this node. */
@@ -196,10 +194,16 @@ class TextRenderer::GlyphAtlas final
     /** The glyph inserted at this node. */
     std::shared_ptr<Glyph> fGlyph;
 
-    ANUBIS_FORCE_INLINE bool isLeaf() const
-    {
-      return fLeft == nullptr && fRight == nullptr;
-    }
+    Node();
+    ~Node();
+
+
+    /***********************************************************************//**
+     * Check if the current node is a leaf node or not.
+     *
+     * @return  True if the node is a leaf node, else  false.
+     **************************************************************************/
+    bool isLeaf() const;
 
     /***********************************************************************//**
      * Insert a new glyph into the atlas and pack it properly.
@@ -210,95 +214,16 @@ class TextRenderer::GlyphAtlas final
      *                contains a glyph, (2) there is not enough space to fit
      *                the glyph.
      **************************************************************************/
-    bool insert(std::shared_ptr<Glyph> glyph)
-    {
-      /* Check if this not a leaf node. If it's not then try to insert the glyph
-       * into one of the child nodes. */
-      if(!isLeaf())
-      {
-        /* Try to insert into the left node. */
-        bool inserted = fLeft->insert(glyph);
-
-        /* Check if it was not inserted on the left. */
-        if(!inserted)
-        {
-          /* Try to insert to the right. */
-          inserted = fRight->insert(glyph);
-        }
-
-        /* Return the insert status for this node. */
-        return inserted;
-      }
-      /* Else it is a leaf node. */
-
-      /* Check if there is allready a glyph stored in this node. */
-      if(fGlyph != nullptr)
-      {
-        /* Return false to indicate that this leaf is allready populated. */
-        return false;
-      }
-
-      /* Check if the glyph will fit into the current rect. */
-      if(!fRect.canFit(BoundingRect(0, 0, fGlyph->fWidth, fGlyph->fHeight)))
-      {
-        /* Return false to indicate that leaf node does not fit. */
-        return false;
-      }
-
-      /* Check if the new glyph fits perfectly. */
-      if(fRect.width() == glyph->fWidth && fRect.height() == glyph->fHeight)
-      {
-        /* Fit the glyph to the node. */
-        fGlyph = glyph;
-
-        /* Return true to indicate it was inserted. */
-        return true;
-      }
-
-      /* Else the nodes must be split. */
-
-      /* Create thje new children for the node. */
-      fLeft = std::make_unique<Node>();
-      fRight = std::make_unique<Node>();
-
-      /* Decide which way to split the bounding rect. */
-      size_t dw = fRect.width() - glyph->fWidth;
-      size_t dh = fRect.height() - glyph->fHeight;
-
-      /* Check if the bounding area must be split vertically. */
-      if(dw > dh)
-      {
-        /* The left node refer to then left bounding rect. */
-        fLeft->fRect = BoundingRect(fRect.x(), fRect.y(),
-                                    glyph->fWidth, fRect.height());
-
-        /* The right node refer to the right bounding rect. */
-        fRight->fRect = BoundingRect(fRect.x() + glyph->fWidth, fRect.y(),
-                              fRect.width() - glyph->fWidth, fRect.height());
-      }
-      /* else split the bounding rect horizontally. */
-      else
-      {
-        /* The left node refers to the top bounding rect. */
-        fLeft->fRect = BoundingRect(fRect.x(), fRect.y(),
-                              fRect.width(), fRect.y() + glyph->fHeight);
-
-        /* The right node refers to the bottom bounding rect. */
-        fRight->fRect = BoundingRect(fRect.x(), fRect.y() + glyph->fHeight,
-                                     fRect.width(), fRect.height());
-      }
-
-      /* Insert into the left node. */
-      return fLeft->insert(glyph);
-    }
+    bool insert(std::shared_ptr<Glyph> glyph);
   };
 
   /** The root node of the binary tree used to packe the glyphs. */
   std::unique_ptr<Node> fRoot;
 
-
+  /** The comparator object used to sort the multiset of glyphs. */
   struct Compare
   {
+    /** Sort the glyphs by code point. */
     bool operator () (const std::shared_ptr<Glyph> & lhs,
                       const std::shared_ptr<Glyph> & rhs)
     { return lhs->kCodePoint < rhs->kCodePoint; }
@@ -312,15 +237,21 @@ class TextRenderer::GlyphAtlas final
    * is used because duplicate code points will exist. */
   std::multiset<std::shared_ptr<Glyph>, Compare> fGlyphs;
 
+  /** The glyphs sorted by their physical area. This is used for packing the
+   * glyphs into the glyph atlas. */
   std::vector<std::shared_ptr<Glyph>> fGlyphsByArea;
-
-
 
   /** Indicate if the atlas changed or not. */
   bool fHasChanged;
 
   /** The pixel map of the atlas. */
   std::unique_ptr<PixelMap> fPixelMap;
+
+  /** Delete the copy constructor. */
+  GlyphAtlas(const GlyphAtlas&) = delete;
+
+  /** Delete the assignment operator. */
+  GlyphAtlas & operator = (const GlyphAtlas&) = delete;
 
   /*************************************************************************//**
    * Check if a glyph of the specified code point and font height is allready
@@ -333,24 +264,26 @@ class TextRenderer::GlyphAtlas final
    ****************************************************************************/
   bool contains(char32_t codePoint, size_t fontHeight);
 
-  void resize(size_t reqDim);
-
-  void pack(const BoundingRect &parentBR);
-
-  void pack(std::shared_ptr<Glyph> glyph);
-
-
-
 public:
 
+  /*************************************************************************//**
+   * Default constructor to initialise FreeType and created the default glyph
+   * atlas.
+   ****************************************************************************/
   GlyphAtlas();
+
+  /*************************************************************************//**
+   * Destructor to terminal FreeType.
+   ****************************************************************************/
   ~GlyphAtlas();
 
   /*************************************************************************//**
    * Prepare the atlas by adding any non existing code points to the codepoint
    * mapping. This must be called before "pack()".
    *
-   * @param str
+   * @param font        The font to use for rendering the glyph(s).
+   * @param str         The string that need to be rendered.
+   * @param fontHeight  The height to render the font at.
    ****************************************************************************/
   void prepare(Font * font, const std::u32string &str, size_t fontHeight);
 
@@ -360,7 +293,102 @@ public:
   void pack();
 };
 
-const size_t TextRenderer::GlyphAtlas::kDefaultDim = 512;
+TextRenderer::GlyphAtlas::Node::Node()
+{
+}
+
+TextRenderer::GlyphAtlas::Node::~Node()
+{
+
+}
+
+bool TextRenderer::GlyphAtlas::Node::isLeaf() const
+{
+  return fLeft == nullptr && fRight == nullptr;
+}
+
+/******************************************************************************/
+bool TextRenderer::GlyphAtlas::Node::insert(std::shared_ptr<Glyph> glyph)
+{
+  /* Check if this not a leaf node. If it's not then try to insert the glyph
+   * into one of the child nodes. */
+  if(!isLeaf())
+  {
+    /* Try to insert into the left node. */
+    bool inserted = fLeft->insert(glyph);
+
+    /* Check if it was not inserted on the left. */
+    if(!inserted)
+    {
+      /* Try to insert to the right. */
+      inserted = fRight->insert(glyph);
+    }
+
+    /* Return the insert status for this node. */
+    return inserted;
+  }
+  /* Else it is a leaf node. */
+
+  /* Check if there is allready a glyph stored in this node. */
+  if(fGlyph != nullptr)
+  {
+    /* Return false to indicate that this leaf is allready populated. */
+    return false;
+  }
+
+  /* Check if the glyph will fit into the current rect. */
+  if(!fRect.canFit(BoundingRect(0, 0, fGlyph->fWidth, fGlyph->fHeight)))
+  {
+    /* Return false to indicate that leaf node does not fit. */
+    return false;
+  }
+
+  /* Check if the new glyph fits perfectly. */
+  if(fRect.width() == glyph->fWidth && fRect.height() == glyph->fHeight)
+  {
+    /* Fit the glyph to the node. */
+    fGlyph = glyph;
+
+    /* Return true to indicate it was inserted. */
+    return true;
+  }
+
+  /* Else the nodes must be split. */
+
+  /* Create thje new children for the node. */
+  fLeft = std::make_unique<Node>();
+  fRight = std::make_unique<Node>();
+
+  /* Decide which way to split the bounding rect. */
+  size_t dw = fRect.width() - glyph->fWidth;
+  size_t dh = fRect.height() - glyph->fHeight;
+
+  /* Check if the bounding area must be split vertically. */
+  if(dw > dh)
+  {
+    /* The left node refer to then left bounding rect. */
+    fLeft->fRect = BoundingRect(fRect.x(), fRect.y(),
+                                glyph->fWidth, fRect.height());
+
+    /* The right node refer to the right bounding rect. */
+    fRight->fRect = BoundingRect(fRect.x() + glyph->fWidth, fRect.y(),
+                          fRect.width() - glyph->fWidth, fRect.height());
+  }
+  /* else split the bounding rect horizontally. */
+  else
+  {
+    /* The left node refers to the top bounding rect. */
+    fLeft->fRect = BoundingRect(fRect.x(), fRect.y(),
+                          fRect.width(), fRect.y() + glyph->fHeight);
+
+    /* The right node refers to the bottom bounding rect. */
+    fRight->fRect = BoundingRect(fRect.x(), fRect.y() + glyph->fHeight,
+                                 fRect.width(), fRect.height());
+  }
+
+  /* Insert into the left node. */
+  return fLeft->insert(glyph);
+}
 
 /******************************************************************************/
 TextRenderer::GlyphAtlas::GlyphAtlas()
@@ -371,8 +399,11 @@ TextRenderer::GlyphAtlas::GlyphAtlas()
     ANUBIS_THROW_RUNTIME_EXCEPTION("Failed to initialise FreeType.");
   }
 
+  /* Do this to resolve issue with gcc. */
+  size_t dim = kDefaultDim;
+
   /* Create the default pixel map using the default atlas size. */
-  fPixelMap = std::make_unique<PixelMap>(kDefaultDim, kDefaultDim,
+  fPixelMap = std::make_unique<PixelMap>(dim , dim,
                                          PixelMap::PixelTypes::Gray);
 }
 
@@ -415,45 +446,6 @@ bool TextRenderer::GlyphAtlas::contains(char32_t codePoint, size_t fontHeight)
 
   /* Otherwise the exact match was not found. */
   return false;
-}
-
-/******************************************************************************/
-void TextRenderer::GlyphAtlas::resize(size_t reqDim)
-{
-  /* First check if it should be resized. */
-  if(reqDim <= fPixelMap->width() && reqDim <= fPixelMap->height())
-  {
-    /* No need to resize. */
-    return;
-  }
-
-  /* The dimension to resize too. */
-  size_t resDim = 0;
-
-  /* Calculate the next required power of two. Currently the maximum cache size
-   * is 8192 x 8192. This is inline with what should work on most video cards.
-   * It should be noted that this requires 64MB of RAM. */
-  for(size_t n = kMinPowerTwo; n <= kMaxPowerTwo; n++)
-  {
-    /* Calculate the current power of two. */
-    resDim = std::pow(2, n);
-
-    /* Check if it's adequate. */
-    if(reqDim <= resDim)
-    {
-      /* Create the new pixel map. */
-      fPixelMap = std::make_unique<PixelMap>(resDim, resDim,
-                                             PixelMap::PixelTypes::Gray);
-
-      /* Return since there is nothing else left to do. */
-      return;
-    }
-  }
-
-  /* If this stage is reached, then the pixel map was not resized because the
-   * required dimensions is larger than the maximum supported area. */
-  ANUBIS_THROW_RUNTIME_EXCEPTION("Unable to resize Glyph Atlas, the required "
-    "size is to large: " << reqDim << "x" << reqDim << ".");
 }
 
 /******************************************************************************/
@@ -539,106 +531,106 @@ void TextRenderer::GlyphAtlas::pack()
   while(curIter != fGlyphsByArea.end());
 }
 
-/******************************************************************************/
-struct TextRenderer::Data
-{
-  /** The number of vertices required to render a glyph. Since quads are used,
-   * four vertices is required. */
-  static const uint16_t kVertsPerGlyph = 4;
+///******************************************************************************/
+//struct TextRenderer::Data
+//{
+//  /** The number of vertices required to render a glyph. Since quads are used,
+//   * four vertices is required. */
+//  static const uint16_t kVertsPerGlyph = 4;
 
-  /** The number of indices that is required to render a single glyph. Since two
-   * triangles are used to render a single quad, six indices are required. */
-  static const uint16_t kIndicesPerGlyph = 6;
+//  /** The number of indices that is required to render a single glyph. Since two
+//   * triangles are used to render a single quad, six indices are required. */
+//  static const uint16_t kIndicesPerGlyph = 6;
 
-  /** The maximum number of glyphs to cache. */
-  const size_t kMaxGlyphCache;
+//  /** The maximum number of glyphs to cache. */
+//  const size_t kMaxGlyphCache;
 
-  /** The maximum number of vertices to cache. */
-  const size_t kMaxCachedVerts;
+//  /** The maximum number of vertices to cache. */
+//  const size_t kMaxCachedVerts;
 
-  /** The ID of the vertex buffer. */
-  GLuint fVertBuffID;
+//  /** The ID of the vertex buffer. */
+//  GLuint fVertBuffID;
 
-  /** The ID of the index buffer. */
-  GLuint fIndexBuffID;
+//  /** The ID of the index buffer. */
+//  GLuint fIndexBuffID;
 
-  GLuint fVAOID;
+//  GLuint fVAOID;
 
-  /** The vertex cache. */
-  std::vector<Vector4f> fVertices;
-
-
-  Data(const std::string &fontFile, const size_t fontHeight, size_t cacheLen);
-  ~Data();
+//  /** The vertex cache. */
+//  std::vector<Vector4f> fVertices;
 
 
-  void initCache();
-};
-
-/******************************************************************************/
-TextRenderer::Data::Data(const std::string & fontFile, const size_t fontHeight,
-                         size_t cacheLen) :
-  kMaxGlyphCache(cacheLen),
-  kMaxCachedVerts(cacheLen *  kVertsPerGlyph)
-{
+//  Data(const std::string &fontFile, const size_t fontHeight, size_t cacheLen);
+//  ~Data();
 
 
-  /* Initialise the render cache. */
-  initCache();
-}
+//  void initCache();
+//};
 
-/******************************************************************************/
-TextRenderer::Data::~Data()
-{
+///******************************************************************************/
+//TextRenderer::Data::Data(const std::string & fontFile, const size_t fontHeight,
+//                         size_t cacheLen) :
+//  kMaxGlyphCache(cacheLen),
+//  kMaxCachedVerts(cacheLen *  kVertsPerGlyph)
+//{
 
-}
 
-/******************************************************************************/
-void TextRenderer::Data::initCache()
-{
-  /* Calculate how many vertices are required. Since rectangles are required
-   * that is 4 vertices per rectangle. */
-  size_t reqVerts = kMaxGlyphCache * kVertsPerGlyph;
+//  /* Initialise the render cache. */
+//  initCache();
+//}
 
-  /* Calculate how many indices must be created. Since the rectangles are built
-   * from two triangles, that is 6 indexes per faces. */
-  size_t reqIndices = kMaxGlyphCache * kIndicesPerGlyph;
+///******************************************************************************/
+//TextRenderer::Data::~Data()
+//{
 
-  /* The vector that stores the list of indexes. This will never change however
-   * we may only choose to draw a subject of the list (since the cache may not
-   * always be full). */
-  std::vector<uint16_t> indices;
-  indices.resize(reqIndices);
+//}
 
-  /* Calculate all the indices for each face. */
-  for(uint16_t i = 0; i < reqIndices; i+= kIndicesPerGlyph)
-  {
-    /* The indices of the first face. */
-    indices.push_back(i);
-    indices.push_back(i + 1);
-    indices.push_back(1 + 2);
+///******************************************************************************/
+//void TextRenderer::Data::initCache()
+//{
+//  /* Calculate how many vertices are required. Since rectangles are required
+//   * that is 4 vertices per rectangle. */
+//  size_t reqVerts = kMaxGlyphCache * kVertsPerGlyph;
 
-    /* The indices of the second face. */
-    indices.push_back(i + 1);
-    indices.push_back(i + 3);
-    indices.push_back(i + 2);
-  }
+//  /* Calculate how many indices must be created. Since the rectangles are built
+//   * from two triangles, that is 6 indexes per faces. */
+//  size_t reqIndices = kMaxGlyphCache * kIndicesPerGlyph;
 
-  /* Create the indices buffer and load the index data. */
-  glGenBuffers(1, &fIndexBuffID);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, fIndexBuffID);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(uint16_t),
-               indices.data(), GL_STATIC_DRAW);
+//  /* The vector that stores the list of indexes. This will never change however
+//   * we may only choose to draw a subject of the list (since the cache may not
+//   * always be full). */
+//  std::vector<uint16_t> indices;
+//  indices.resize(reqIndices);
 
-  /* Reserver enough space in the vertices. */
-  fVertices.resize(kMaxCachedVerts);
+//  /* Calculate all the indices for each face. */
+//  for(uint16_t i = 0; i < reqIndices; i+= kIndicesPerGlyph)
+//  {
+//    /* The indices of the first face. */
+//    indices.push_back(i);
+//    indices.push_back(i + 1);
+//    indices.push_back(1 + 2);
 
-  /* Create the vertex buffer. */
-  glGenBuffers(1, &fVertBuffID);
-  glBindBuffer(GL_ARRAY_BUFFER, fVertBuffID);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(Vector4f) * reqVerts,
-               fVertices.data(), GL_DYNAMIC_DRAW);
-}
+//    /* The indices of the second face. */
+//    indices.push_back(i + 1);
+//    indices.push_back(i + 3);
+//    indices.push_back(i + 2);
+//  }
+
+//  /* Create the indices buffer and load the index data. */
+//  glGenBuffers(1, &fIndexBuffID);
+//  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, fIndexBuffID);
+//  glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(uint16_t),
+//               indices.data(), GL_STATIC_DRAW);
+
+//  /* Reserver enough space in the vertices. */
+//  fVertices.resize(kMaxCachedVerts);
+
+//  /* Create the vertex buffer. */
+//  glGenBuffers(1, &fVertBuffID);
+//  glBindBuffer(GL_ARRAY_BUFFER, fVertBuffID);
+//  glBufferData(GL_ARRAY_BUFFER, sizeof(Vector4f) * reqVerts,
+//               fVertices.data(), GL_DYNAMIC_DRAW);
+//}
 
 /******************************************************************************/
 TextRenderer::TextRenderer(size_t cacheLen)
@@ -696,3 +688,16 @@ TextRenderer::TextRenderer(size_t cacheLen)
 //    }
 //  }
 //}
+
+/******************************************************************************/
+void TextRenderer::drawTextSimple(const std::string & text, const Font * font,
+  float height, const Colour & colour, const Math::Matrix4f & trans)
+{
+  /* The UTF-8 - UTF-32 standard conversion facet. */
+  std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> cvt;
+
+  /* Conver the text into UTF32. */
+  std::u32string u32Text = cvt.from_bytes(text);
+
+  /* Prepare the glyph atlas to render the string. */
+}

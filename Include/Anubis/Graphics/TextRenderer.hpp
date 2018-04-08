@@ -19,12 +19,14 @@ namespace Anubis
        * the glyphs. */
       class GlyphAtlas;
 
+      /** The instance of the glyph atlas. */
+      std::unique_ptr<GlyphAtlas> fGlyphAtlas;
+
       /** The object storing the platform specific information of the class. */
       struct Data;
 
       /** A reference to the platform specific information. */
       //std::unique_ptr<Data> fData;
-
     public:
 
       class Font;
@@ -65,6 +67,11 @@ namespace Anubis
        ************************************************************************/
       void drawText(const std::string & text, const Font * font, float height,
                     const Colour & colour, const Math::Matrix4f & trans);
+
+
+      void drawTextSimple(const std::string & text, const Font * font,
+                          float height, const Colour & colour,
+                          const Math::Matrix4f & trans);
     };
   }
 }
