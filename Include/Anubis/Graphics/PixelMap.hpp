@@ -32,17 +32,22 @@ namespace Anubis
     public:
 
       /*********************************************************************//**
-       * The supported images types.
+       * The supported images types. This list is very important for textureing
+       * and if modified, the Texture class must be updated to take this into
+       * account.
        ************************************************************************/
       enum class PixelTypes : uint8_t
       {
-        /** A gray scale pixel map that can be used as an alpha map. */
-        Gray   = 0,
-        RGB,
-        RGBA,
-        BGR,
-        BGRA
+        /** A gray scale pixel map that can be used as an alpha map. Mapped to
+         * GL_RED. */
+        Gray    = 0,
+        RGB     = 1,
+        RGBA    = 2,
+        BGR     = 3,
+        BGRA    = 4
       };
+
+      PixelMap(const PixelMap & cp);
 
       /*********************************************************************//**
        * Load the pixel map data from a raw TGA data block.
@@ -86,7 +91,11 @@ namespace Anubis
 
       size_t stride() const;
 
+      const uint8_t * data() const;
+
       void resize(size_t width, size_t height);
+
+      void flipVertical();
 
       /*********************************************************************//**
        * Copy the whole src pixel map into this pixel map at dstX and dstY. If

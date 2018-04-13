@@ -10,6 +10,18 @@ const uint8_t PixelMap::kUncompHeader[12] = {0,0,2,0,0,0,0,0,0,0,0,0};
 const size_t PixelMap::kBPP[5] = {1, 3, 4, 3, 4};
 
 /******************************************************************************/
+PixelMap::PixelMap(const PixelMap & cp)
+{
+  fType = cp.fType;
+  fWidth = cp.fWidth;
+  fHeight = cp.fHeight;
+  fBPP = cp.fBPP;
+
+  /* Copy the data. */
+  fData = cp.fData;
+}
+
+/******************************************************************************/
 PixelMap::PixelMap(const std::vector<uint8_t> data)
 {
   /* Check if the TGA is uncompressed. */
@@ -268,6 +280,13 @@ size_t PixelMap::stride() const
 {
   return fWidth * bpp();
 }
+
+/******************************************************************************/
+const uint8_t * PixelMap::data() const
+{
+  return fData.data();
+}
+
 /******************************************************************************/
 void PixelMap::resize(size_t width, size_t height)
 {
@@ -277,6 +296,26 @@ void PixelMap::resize(size_t width, size_t height)
 
   /* Resize the memory of the pixel map. */
   fData.resize(fWidth * fHeight * bpp());
+
+  memset(fData.data(), 0, fData.size());
+}
+
+/******************************************************************************/
+void PixelMap::flipVertical()
+{
+  /* Create another temporary storage vector. */
+  std::vector<uint8_t> tempData;
+  tempData.resize(fData.size());
+
+  /* Iterate through all the data. */
+  for(size_t i = 0; i < fData.size(); i += stride())
+  {
+    /* Copy the data.*/
+    memcpy(&tempData[fData.size() - i - stride()], &fData[i], stride());
+  }
+
+  /* Store the new data. */
+  fData = tempData;
 }
 
 /******************************************************************************/

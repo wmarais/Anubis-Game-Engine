@@ -11,7 +11,7 @@ namespace Anubis
     {
       union
       {
-        uint8_t fMem[4];
+        float fMem[4];
       } __attribute__ ((aligned (ANUBIS_SIMD_MEM_ALIGNMENT)));
 
       static const size_t kRed = 0;
@@ -21,7 +21,7 @@ namespace Anubis
 
     public:
 
-      Colour(uint8_t red, uint8_t green, uint8_t blue, uint8_t alpha)
+      Colour(float red, float green, float blue, float alpha)
       {
         fMem[kRed] = red;
         fMem[kGreen] = green;
@@ -29,7 +29,14 @@ namespace Anubis
         fMem[kAlpha] = alpha;
 
       }
+
+      const float * data() const
+      {
+        return fMem;
+      }
     };
+
+    static const Colour kBlack(0.0f, 0.0f, 0.0f, 0.0f);
   }
 }
 

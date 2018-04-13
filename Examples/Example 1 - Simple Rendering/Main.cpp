@@ -129,7 +129,7 @@ int main(int argc, char * argv[])
   GLFWwindow * window;
 
   /* Create a simulation. */
-  std::unique_ptr<Server> server = std::make_unique<Server>();
+  /*std::unique_ptr<Server> server = std::make_unique<Server>();*/
 
 
   /* Set the error callback. */
@@ -188,10 +188,29 @@ int main(int argc, char * argv[])
 
   /* Load the font. */
   TextRenderer::Font * font = textRenderer.addFont("Font/Actor-Regular.ttf");
+  TextRenderer::Font * font1 = textRenderer.addFont("Font/arial.ttf");
 
   /* Render a simple string. */
-  textRenderer.drawTextSimple(u8"12345",
+  std::stringstream ss;
+
+  for(char i = 32; i < 127; i++)
+  {
+    ss << i;
+  }
+  textRenderer.drawTextSimple("Hello Cruel World!",
+                              font, 400, Colour(0, 0, 0, 0), Matrix4f());
+
+  textRenderer.drawTextSimple(ss.str(),
+                              font1, 20, Colour(0, 0, 0, 0), Matrix4f());
+
+  textRenderer.drawTextSimple(ss.str(),
                               font, 100, Colour(0, 0, 0, 0), Matrix4f());
+
+
+  PixelMap testPixelMap(512, 512, PixelMap::PixelTypes::Gray);
+
+  std::unique_ptr<Texture2D> texture = std::make_unique<Texture2D>(testPixelMap);
+
 
 
   /* While the windows is open, keep looping. */

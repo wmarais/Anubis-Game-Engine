@@ -17,5 +17,7 @@
 #include "Graphics/Shader.hpp"
 #include "Graphics/ShaderProgram.hpp"
 #include "Graphics/TextRenderer.hpp"
+#include "Graphics/Texture.hpp"
+#include "Graphics/Texture2D.hpp"
 
 #endif /* ANUBIS_GRAPHICS_HPP */

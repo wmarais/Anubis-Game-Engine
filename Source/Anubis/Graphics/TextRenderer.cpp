@@ -738,11 +738,16 @@ void TextRenderer::drawTextSimple(const std::string & text, Font * font,
   /* Pack the atlas. */
   fGlyphAtlas->pack();
 
+  PixelMap tempPixMap(*(fGlyphAtlas->fPixelMap.get()));
+  tempPixMap.flipVertical();
+
   /* The get the pixel map from the foint atlas. */
-  std::vector<uint8_t> atlasData = fGlyphAtlas->fPixelMap->toTGA();
+  std::vector<uint8_t> atlasData = tempPixMap.toTGA();
+
+  /* Flip the pixel map vertically since the origin is at the bottom left. */
 
   /* Conver the glyph atlas to a TGA and save it to file. */
-  FILE * file = fopen("FontAtlas.tga", "w");
+  FILE * file = fopen("FontAtlas.tga", "wb");
   fwrite(atlasData.data(), sizeof(uint8_t), atlasData.size(), file);
   fclose(file);
 }

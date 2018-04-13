@@ -174,6 +174,8 @@ if(ANUBIS_BUILD_GRAPHICS)
     Include/Anubis/Graphics/Shader.hpp
     Include/Anubis/Graphics/ShaderProgram.hpp
     Include/Anubis/Graphics/TextRenderer.hpp
+    Include/Anubis/Graphics/Texture.hpp
+    Include/Anubis/Graphics/Texture2D.hpp
   )
 
   set(AnubisGraphics_SOURCES
@@ -191,6 +193,8 @@ if(ANUBIS_BUILD_GRAPHICS)
     Source/Anubis/Graphics/Shader.cpp
     Source/Anubis/Graphics/ShaderProgram.cpp
     Source/Anubis/Graphics/TextRenderer.cpp
+    Source/Anubis/Graphics/Texture.cpp
+    Source/Anubis/Graphics/Texture2D.cpp
   )
 endif()
 
