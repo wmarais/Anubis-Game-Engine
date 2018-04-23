@@ -15,44 +15,63 @@ const char * Shader::kTypeStrs[kShaderTypeCount]
 };
 
 /******************************************************************************/
-Shader::Shader(Types type, std::initializer_list<std::string> src)
+const uint32_t Shader::kGLTypes[kTypesCount] =
 {
-  /* Set the OpenGL type. */
-  switch(type)
+  GL_VERTEX_SHADER,
+  GL_FRAGMENT_SHADER,
+  #ifdef GL_COMPUTE_SHADER
+    GL_COMPUTE_SHADER
+  #else
+    0
+  #endif /* GL_COMPUTE_SHADER */
+  ,
+  GL_GEOMETRY_SHADER,
+
+  #ifdef GL_TESS_EVALUATION_SHADER
+    GL_TESS_EVALUATION_SHADER
+  #else
+    0
+  #endif /* GL_TESS_EVALUATION_SHADER */
+  ,
+  #ifdef GL_TESS_CONTROL_SHADER
+    GL_TESS_CONTROL_SHADER
+  #else
+    0
+  #endif /* GL_TESS_CONTROL_SHADER */
+};
+
+/******************************************************************************/
+Shader::Shader(const std::string &path, const std::string & src, Types type) :
+  fID(0)
+{
+  /* Create the shader. */
+  fID = glCreateShader(kGLTypes[static_cast<uint8_t>(type)]);
+
+  /* Check if the shader was created. */
+  if(fID == 0)
   {
-    #ifdef GL_VERTEX_SHADER
-      case Types::Vertex: fGLType = GL_VERTEX_SHADER; break;
-    #endif /* GL_VERTEX_SHADER */
-
-    #ifdef GL_FRAGMENT_SHADER
-      case Types::Fragment: fGLType = GL_FRAGMENT_SHADER; break;
-    #endif /* GL_FRAGMENT_SHADER */
-
-    #ifdef GL_COMPUTE_SHADER
-      case Types::Compute: fGLType = GL_COMPUTE_SHADER; break;
-    #endif /* GL_COMPUTE_SHADER */
-
-    #ifdef GL_GEOMETRY_SHADER
-      case Types::Geometry: fGLType = GL_GEOMETRY_SHADER; break;
-    #endif /* GL_GEOMETRY_SHADER */
-
-    #ifdef GL_TESS_EVALUATION_SHADER
-      case Types::TessEvaluation5: fGLType = GL_TESS_EVALUATION_SHADER; break;
-    #endif /* GL_TESS_EVALUATION_SHADER */
-
-    #ifdef GL_TESS_CONTROL_SHADER
-      case Types::TessControl: fGLType = GL_TESS_CONTROL_SHADER; break;
-    #endif /* GL_TESS_CONTROL_SHADER */
-
-    default:
-      ANUBIS_THROW_RUNTIME_EXCEPTION("The specified shader type (" <<
-        kTypeStrs[static_cast<size_t>(type)] << ") is not availble in the " <<
-        "current version of OpenGL.");
-    break;
+    ANUBIS_THROW_RUNTIME_EXCEPTION("Failed to create shader (" <<
+      kTypeStrs[static_cast<size_t>(type)] << ").");
   }
 
+  /* The length of the shader source. */
+  GLint length = static_cast<GLint>(src.length());
+
+  /* The pointer to the shader source. */
+  const GLchar * source = static_cast<const GLchar*>(src.c_str());
+
+  /* Set the shader source. */
+  glShaderSource(fID, 1, &source, &length);
+
+  /* Compile and verify the compilation result. */
+  compileAndVerify();
+}
+
+/******************************************************************************/
+Shader::Shader(Types type, std::initializer_list<std::string> src) : fID(0)
+{
   /* Create the shader item. */
-  fID = glCreateShader(fGLType);
+  fID = glCreateShader(kGLTypes[static_cast<uint8_t>(type)]);
 
   /* Check if the shader was created. */
   if(fID == 0)
@@ -83,30 +102,8 @@ Shader::Shader(Types type, std::initializer_list<std::string> src)
   /* Compile the shader. */
   glCompileShader(fID);
 
-  /* Get the compiled status of the shader. */
-  GLint isCompiled = 0;
-  glGetShaderiv(fID, GL_COMPILE_STATUS, &isCompiled);
-
-  /* Check if compilation failed. */
-  if(isCompiled == GL_FALSE)
-  {
-    /* Get the log information from the compilation operation. */
-    GLint maxLength = 0;
-    glGetShaderiv(fID, GL_INFO_LOG_LENGTH, &maxLength);
-
-    /* Create the required string to store the log. */
-    std::string logMessage;
-    logMessage.resize(maxLength);
-
-    /* Read the string. */
-    glGetShaderInfoLog(fID, maxLength, &maxLength,
-                       &logMessage[0]);
-
-    /* Resize the string in case it has garbage at the end. */
-    logMessage.resize(maxLength);
-
-    ANUBIS_THROW_RUNTIME_EXCEPTION("Failed to compile shader!");
-  }
+  /* Compile and verify the compilation result. */
+  compileAndVerify();
 }
 
 /******************************************************************************/
@@ -117,6 +114,44 @@ Shader::~Shader()
   {
     /* Delete the shader. */
     glDeleteShader(fID);
+  }
+}
+
+/******************************************************************************/
+void Shader::compileAndVerify()
+{
+  /* Compile the shader. */
+  glCompileShader(fID);
+
+  /* Get the compiled status of the shader. */
+  GLint isCompiled = 0;
+  glGetShaderiv(fID, GL_COMPILE_STATUS, &isCompiled);
+
+  /* Get the log information from the compilation operation. */
+  GLint maxLength = 0;
+  glGetShaderiv(fID, GL_INFO_LOG_LENGTH, &maxLength);
+
+  /* Create the required string to store the log. */
+  std::string logMessage;
+  logMessage.resize(maxLength);
+
+  /* Read the string. */
+  glGetShaderInfoLog(fID, maxLength, &maxLength,
+                     &logMessage[0]);
+
+  /* Resize the string in case it has garbage at the end. */
+  logMessage.resize(maxLength);
+
+  /* Check if compilation failed. */
+  if(isCompiled == GL_FALSE)
+  {
+    ANUBIS_THROW_RUNTIME_EXCEPTION("Failed to compile shader because: "
+      << logMessage.data());
+  }
+  else
+  {
+    /* Just log any messages. */
+    ANUBIS_LOG_INFO("Shader Compilation Log: " << logMessage.data());
   }
 }
 

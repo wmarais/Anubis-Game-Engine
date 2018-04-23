@@ -17,4 +17,8 @@
 /* Indicate if the host OS is windows. */
 #cmakedefine ANUBIS_OS_WINDOWS
 
+/** Indicate if only data packs must be loaded instead of directories and data
+ * packs. */
+#define ANUBIS_LOAD_DATA_PACK_ONLY @ANUBIS_LOAD_DATA_PACK_ONLY@
+
 #endif /* ANUBIS_CONFIG_HPP */

@@ -161,8 +161,8 @@ namespace Anubis
        *
        * @param scene The scene to render with this camera.
        ************************************************************************/
-      void update(const Physics::Scene & scene,
-                  const Common::Library<LODSet> &lodLibrary);
+//      void update(const Physics::Scene & scene,
+//                  const Common::Library<LODSet> &lodLibrary);
 
       /*********************************************************************//**
        * Render the scene, or rather the content of the render queue. This must

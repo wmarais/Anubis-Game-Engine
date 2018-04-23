@@ -40,6 +40,9 @@ Texture2D::~Texture2D()
 /******************************************************************************/
 void Texture2D::setData(const PixelMap &pixelMap)
 {
+  /* Bind the texture. */
+  bind();
+
   /* Check if there is a resolution missmatch. */
   if(pixelMap.width() != fWidth || pixelMap.height() != fHeight ||
      pixelMap.pixelType() != fPixelType)

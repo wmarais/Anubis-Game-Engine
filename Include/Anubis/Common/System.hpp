@@ -9,6 +9,7 @@
 #include <Ws2tcpip.h>
 #include <windows.h>
 
+#include <physfs.h>
 #include "../../../Libraries/Glad/Include/glad/glad.h"
 
 

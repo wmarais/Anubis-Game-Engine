@@ -17,8 +17,15 @@ find_package(Doxygen)
 
 find_library(ANUBIS_HAS_RPCRT4 rpcrt4)
 find_library(ANUBIS_HAS_WINSOCK2 ws2_32)
+find_library(ANUBIS_HAS_PHYSFS physfs)
+
 
 find_package(freetype CONFIG REQUIRED PATH_SUFFIXES "/cmake/freetype")
+#find_package(PhysFS CONFIG REQUIRED PATH_SUFFIXES "/cmake/physfs")
+
+
+# THIS SUCKS BUT NEEDED TO FIX PHYSFS INCLUDE PATH ISSUE.
+include_directories("C:/Development/Libraries/include")
 
 ################################################################################
 # HOST DETECTION
@@ -33,6 +40,17 @@ endif()
 ################################################################################
 # USER CONFIGURABLE BUILD OPTIONS
 ################################################################################
+
+# Check if data-packs only must be loaded, instead of directories and data packs.
+option(ANUBIS_CONF_LOAD_DATA_PACK_ONLY
+  "Only load data packs and not directories." OFF)
+
+if(ANUBIS_CONF_LOAD_DATA_PACK_ONLY)
+  set(ANUBIS_LOAD_DATA_PACK_ONLY "true")
+else()
+  set(ANUBIS_LOAD_DATA_PACK_ONLY "false")
+endif()
+
 # Check if the maths library must be built.
 option(ANUBIS_BUILD_MATHS "Build the mathematics library." ON)
 
@@ -89,7 +107,7 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
   endif()
 
   # Enable all compiler warnings and C++ 14.
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=c++14")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=c++17")
 endif()
 
 ################################################################################
@@ -114,14 +132,17 @@ set(AnubisCommon_HEADERS
   Include/Anubis/Common/Algorithms.hpp
   Include/Anubis/Common/Barrier.hpp
   Include/Anubis/Common/CircularQueue.hpp
+  Include/Anubis/Common/DataPack.hpp
+  Include/Anubis/Common/Directory.hpp
+  Include/Anubis/Common/File.hpp
   Include/Anubis/Common/Float.hpp
   Include/Anubis/Common/IdentObj.hpp
   Include/Anubis/Common/Library.hpp
   Include/Anubis/Common/Log.hpp
   Include/Anubis/Common/Memory.hpp
   Include/Anubis/Common/Misc.hpp
+  Include/Anubis/Common/Resources.hpp
   Include/Anubis/Common/SubObj.hpp
-  Include/Anubis/Common/String.hpp
   Include/Anubis/Common/System.hpp
   Include/Anubis/Common/UUID.hpp
 
@@ -131,9 +152,13 @@ set(AnubisCommon_HEADERS
 set(AnubisCommon_SOURCES
   Source/Anubis/Common/Algorithms.cpp
   Source/Anubis/Common/Barrier.cpp
+  Source/Anubis/Common/DataPack.cpp
+  Source/Anubis/Common/Directory.cpp
+  Source/Anubis/Common/File.cpp
   Source/Anubis/Common/Float.cpp
+  Source/Anubis/Common/Library.cpp
   Source/Anubis/Common/Log.cpp
-  Source/Anubis/Common/String.cpp
+  Source/Anubis/Common/Resources.cpp
   Source/Anubis/Common/UUID.cpp
 
   Source/Anubis/Common/System/SocketWrapper.cpp
@@ -304,6 +329,10 @@ endif()
 
 if(ANUBIS_HAS_RPCRT4)
   target_link_libraries(AnubisCommon ${ANUBIS_HAS_RPCRT4})
+endif()
+
+if(ANUBIS_HAS_PHYSFS)
+  target_link_libraries(AnubisCommon ${ANUBIS_HAS_PHYSFS})
 endif()
 
 # Build the examples.

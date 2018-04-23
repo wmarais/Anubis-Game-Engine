@@ -53,7 +53,12 @@ namespace Anubis
     #endif /* ANUBIS_HOST_IS_LITTLE_ENDIAN */
   }
 
-
+  namespace Common
+  {
+    bool dirExist(const std::string & path);
+    bool fileExist(const std::string & path);
+    std::vector<std::string> allFiles(const std::string & path);
+  }
 }
 
 

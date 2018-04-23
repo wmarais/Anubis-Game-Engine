@@ -19,6 +19,10 @@ namespace Anubis
       /** The pixel format of the texture. */
       PixelMap::PixelTypes fPixelType;
 
+      Texture2D(const Texture2D &) = delete;
+
+      Texture & operator = (const Texture2D &) = delete;
+
     public:
 
       Texture2D(const PixelMap & pixelMap, bool genMipMaps = true);

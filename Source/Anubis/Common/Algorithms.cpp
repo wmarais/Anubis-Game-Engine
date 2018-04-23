@@ -1,6 +1,8 @@
+#include "../../../Include/Anubis/Common/System.hpp"
 #include "../../../Include/Anubis/Common.hpp"
 
 using namespace Anubis;
+using namespace Anubis::Common;
 
 /******************************************************************************/
 void Anubis::pause()
@@ -43,4 +45,47 @@ std::vector<std::string> Anubis::split(const std::string & str,
 
   /* Return the list of tokens. */
   return tokens;
+}
+
+/******************************************************************************/
+bool dirExist(const std::string & path)
+{
+  DWORD ftyp = GetFileAttributesA(path.c_str());
+  if (ftyp == INVALID_FILE_ATTRIBUTES)
+    return false;  //something is wrong with your path!
+
+  if (ftyp & FILE_ATTRIBUTE_DIRECTORY)
+    return true;   // this is a directory!
+
+  return false;    // this is not a directory!
+}
+
+/******************************************************************************/
+bool fileExist(const std::string & path)
+{
+  DWORD ftyp = GetFileAttributesA(path.c_str());
+  if (ftyp == INVALID_FILE_ATTRIBUTES)
+    return false;  //something is wrong with your path!
+  return true;
+}
+
+/******************************************************************************/
+std::vector<std::string> allFiles(const std::string & path)
+{
+  /* the list of files in the directory. */
+  std::vector<std::string> files;
+
+  HANDLE hFind;
+  WIN32_FIND_DATA data;
+
+  /* Find the first file in the path. */
+  hFind = FindFirstFile("c:\\*.*", &data);
+  if (hFind != INVALID_HANDLE_VALUE)
+  {
+
+    do {
+      printf("%s\n", data.cFileName);
+    } while (FindNextFile(hFind, &data));
+    FindClose(hFind);
+  }
 }

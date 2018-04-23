@@ -132,7 +132,7 @@ namespace Anubis
       }
 
 
-      Matrix4f operator * (const Matrix4f & rhs)
+      Matrix4f operator * (const Matrix4f & rhs) const
       {
         /* The resulting matrix. */
         Matrix4f result;
@@ -293,7 +293,7 @@ namespace Anubis
       /*********************************************************************//**
        * Implements the matrix and vector multiplication operator.
        ************************************************************************/
-      ANUBIS_FORCE_INLINE Vector4f operator * (const Vector4f & rhs)
+      ANUBIS_FORCE_INLINE Vector4f operator * (const Vector4f & rhs) const
       {
         /* Return the calculated vector.*/
         return Vector4f

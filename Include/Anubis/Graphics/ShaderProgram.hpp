@@ -10,10 +10,7 @@ namespace Anubis
     class ShaderProgram final
     {
     public:
-      /*********************************************************************//**
-       * Default constructor creating the
-       ************************************************************************/
-      ShaderProgram(std::initializer_list<std::shared_ptr<Shader>> shaders);
+      ShaderProgram(std::vector<std::shared_ptr<Shader>> & shaders);
 
       /*********************************************************************//**
        * Destroy the resources that was allocated for the shader program.

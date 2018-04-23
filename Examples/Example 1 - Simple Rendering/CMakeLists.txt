@@ -8,7 +8,7 @@ set(AnubisExample_SimpleRendering_SOURCES
 
 set(AnubisExample_SimpleRendering_HEADERS
   ../../Libraries/Glad/Include/glad/glad.h
-  ../../Libraries/Glad/Include/KHR/khrplatform.h
+  ../../Libraries/Glad/Include/glad/khrplatform.h
 )
 
 include_directories(Include)

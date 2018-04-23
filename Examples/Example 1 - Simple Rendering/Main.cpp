@@ -32,9 +32,7 @@ std::unique_ptr<Camera> gCamera;
 std::unique_ptr<GLState> gGLState;
 
 /* The library of LODSets. */
-std::unique_ptr<Library<LODSet>> gLODSetLibrary;
-
-
+//std::unique_ptr<Library<LODSet>> gLODSetLibrary;
 
 /******************************************************************************/
 void gInitScene()
@@ -54,9 +52,9 @@ void gInitScene()
   /* Add the mesh to the mesh library. */
   gMeshLibrary.push_back(mesh);
 
-  /* Create a buffer object to render the mesh with.*/
-  std::shared_ptr<BufferObject> buffObj =
-      std::make_shared<BufferObject>(gMeshLibrary);
+//  /* Create a buffer object to render the mesh with.*/
+//  std::shared_ptr<BufferObject> buffObj =
+//      std::make_shared<BufferObject>(gMeshLibrary);
 
   /****************************************
    * STEP 2 - CREATE LOD SETS

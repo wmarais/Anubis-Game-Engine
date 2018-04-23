@@ -84,37 +84,37 @@ void Camera::RenderQueue::renderTransparent(const Camera * camera)
 //}
 
 /******************************************************************************/
-void Camera::update(const Physics::Scene & scene,
-                    const Common::Library<LODSet> & lodLibrary)
-{
-  /* Clear the render queue. */
-  fRenderQueue.reset();
+//void Camera::update(const Physics::Scene & scene,
+//                    const Common::Library<LODSet> & lodLibrary)
+//{
+//  /* Clear the render queue. */
+//  fRenderQueue.reset();
 
 
 
 
-//  /* TODO - Make this fast. */
-//  /* Iterate through all the materials in the scene. */
-//  for(auto material : scene->opaqueMaterials())
-//  {
-//    /* The list of visible meshes. */
-//    std::vector<std::shared_ptr<MeshRef>> visibleMeshes;
+////  /* TODO - Make this fast. */
+////  /* Iterate through all the materials in the scene. */
+////  for(auto material : scene->opaqueMaterials())
+////  {
+////    /* The list of visible meshes. */
+////    std::vector<std::shared_ptr<MeshRef>> visibleMeshes;
 
-//    /* Reserve enough memory to prevent allocation. */
-//    visibleMeshes.reserve(material->meshRefs().size());
+////    /* Reserve enough memory to prevent allocation. */
+////    visibleMeshes.reserve(material->meshRefs().size());
 
-//    /* Iterate through all the meshes. */
-//    for(auto meshRef : material->meshRefs())
-//    {
-//      /* Check if the mesh is visible to the camera. */
-//      /* For now just make everything visible. It is more important to get
-//       * something rendering that anything else atm. */
-//      visibleMeshes.push_back(meshRef);
+////    /* Iterate through all the meshes. */
+////    for(auto meshRef : material->meshRefs())
+////    {
+////      /* Check if the mesh is visible to the camera. */
+////      /* For now just make everything visible. It is more important to get
+////       * something rendering that anything else atm. */
+////      visibleMeshes.push_back(meshRef);
 
-//      //fRenderQueue.
-//    }
-//  }
-}
+////      //fRenderQueue.
+////    }
+////  }
+//}
 
 /******************************************************************************/
 void Camera::render(GLState * state)

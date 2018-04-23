@@ -4,8 +4,7 @@
 using namespace Anubis::Graphics;
 
 /******************************************************************************/
-ShaderProgram::ShaderProgram(std::initializer_list<std::shared_ptr<Shader>>
-                             shaders)
+ShaderProgram::ShaderProgram(std::vector<std::shared_ptr<Shader>> &shaders)
 {
   /* Create a shader program. */
   fID = glCreateProgram();
@@ -35,13 +34,13 @@ ShaderProgram::ShaderProgram(std::initializer_list<std::shared_ptr<Shader>>
     logMessage.resize(maxLength);
 
     /* Read the string. */
-    glGetProgramInfoLog(fID, maxLength, &maxLength,
-                        &logMessage[0]);
+    glGetProgramInfoLog(fID, maxLength, &maxLength, (GLchar*)(logMessage.data()));
 
     /* Resize the string in case it has garbage at the end. */
     logMessage.resize(maxLength);
 
-    ANUBIS_THROW_RUNTIME_EXCEPTION("Failed to link the shader program!");
+    ANUBIS_THROW_RUNTIME_EXCEPTION("Failed to link the shader program, "
+      "because: " << logMessage.data() << ", Log Length: " << maxLength);
   }
 }
 

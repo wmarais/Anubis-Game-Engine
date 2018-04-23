@@ -12,6 +12,28 @@ using namespace Anubis::Math;
 using namespace Anubis::Physics;
 using namespace Anubis::Graphics;
 
+
+const std::string TextRenderer::kVertexShaderCode =
+"#version 320 core \n"
+"layout (location = 0) in vec4 vertex; \n"
+"layout (location = 1) in vec2 texCoord; \n"
+"out vec2 texCoordV; \n"
+"uniform mat4 transform; \n"
+"void main() { \n"
+"  gl_Position = transform * vertex; \n"
+"  texCoordV = texCoord; \n"
+"}\n";
+
+const std::string TextRenderer::kFragmentShaderCode =
+"#version 320\n"
+"in vec2 texCoordV; \n"
+"out vec4 colorOut; \n"
+"uniform sampler2D texture; "
+"void main() {\n"
+"  colorOut = vec4(texCoord, 0.0, 0.0); \n"
+"}\n";
+
+
 /*##############################################################################
 ##############################################################################*/
 struct TextRenderer::Glyph final
@@ -21,6 +43,9 @@ struct TextRenderer::Glyph final
 
   /** The height of the font used to render this glyph. */
   const size_t kFontHeight;
+
+  /** The font that was used to render the glyph. */
+  const TextRenderer::Font * kFont;
 
   /** The area of the glyph. */
   const float kArea;
@@ -76,8 +101,8 @@ TextRenderer::Glyph::Glyph(uint32_t codePoint, const FT_Face & face,
   kHeight(face->glyph->bitmap.rows),
   kBearingX(face->glyph->bitmap_left),
   kBearingY(face->glyph->bitmap_top),
-  kAdvanceX(face->glyph->advance.x),
-  kAdvanceY(face->glyph->advance.y),
+  kAdvanceX((face->glyph->advance.x) >> 6),
+  kAdvanceY((face->glyph->advance.y) >> 6),
   fX(0.0f),
   fY(0.0f)
 {
@@ -291,12 +316,16 @@ public:
    * @param str         The string that need to be rendered.
    * @param fontHeight  The height to render the font at.
    ****************************************************************************/
-  void prepare(Font * font, const std::u32string &str, size_t fontHeight);
+  bool prepare(Font * font, const std::u32string &str, size_t fontHeight);
 
   /*************************************************************************//**
    * Tightly pack the glyphs into the glyph (texture) atlas.
    ****************************************************************************/
   void pack();
+
+  /* Get a reference to the glyph. */
+  Glyph * find(char32_t codePoint, size_t fontHeight,
+                              const Font * font);
 
   Font * addFont(const std::string & path, const Common::UUID & uuid);
 };
@@ -438,8 +467,8 @@ bool TextRenderer::GlyphAtlas::contains(char32_t codePoint, size_t fontHeight)
   {
     /* Find the last occurance of the glyph. */
     auto end = std::upper_bound(start, fGlyphs.end(), codePoint,
-      [](const char32_t & rhs, const std::shared_ptr<Glyph> & lhs)
-        -> bool { return lhs->kCodePoint < rhs; });
+      [](const char32_t & lhs, const std::shared_ptr<Glyph> & rhs)
+        -> bool { return lhs < rhs->kCodePoint; });
 
     /* Search for the first glyph with the correct font height in the range,
      * there should never be more than one. */
@@ -460,7 +489,44 @@ bool TextRenderer::GlyphAtlas::contains(char32_t codePoint, size_t fontHeight)
 }
 
 /******************************************************************************/
-void TextRenderer::GlyphAtlas::prepare(Font * font, const std::u32string & str,
+TextRenderer::Glyph * TextRenderer::GlyphAtlas::find(
+    char32_t codePoint, size_t fontHeight, const Font * font)
+{
+  /* Find the first occurence of the code point in the atlas. */
+  auto start = std::lower_bound(fGlyphs.begin(), fGlyphs.end(), codePoint,
+    [](const std::shared_ptr<Glyph> & lhs, const char32_t & rhs)
+      -> bool { return lhs->kCodePoint < rhs; });
+
+  /* Check if it was found. */
+  if(start != fGlyphs.end())
+  {
+    /* Find the last occurance of the glyph. */
+    auto end = std::upper_bound(start, fGlyphs.end(), codePoint,
+      [](const char32_t & lhs, const std::shared_ptr<Glyph> & rhs)
+        -> bool { return lhs < rhs->kCodePoint; });
+
+    /* Search for the first glyph with the correct font height in the range,
+     * there should never be more than one. */
+    auto exact = std::find_if(start, end,
+      [&fontHeight, &font](const std::shared_ptr<Glyph> & glyph)
+        -> bool { return glyph->kFontHeight == fontHeight &&
+                         glyph->kFont == font; });
+
+    /* Check if the exact codepoint and font height has been found. */
+    if(exact != fGlyphs.end())
+    {
+      /* Return the glyph that was found. */
+      return exact->get();
+    }
+  }
+
+  /* Throw an exception if the glyph was not found because it should be in
+   * here unless something is broken. */
+  ANUBIS_THROW_RUNTIME_EXCEPTION("Failed to find glyph: " << codePoint);
+}
+
+/******************************************************************************/
+bool TextRenderer::GlyphAtlas::prepare(Font * font, const std::u32string & str,
                                        size_t fontHeight)
 {
   /* Iterate through the whole string. */
@@ -482,6 +548,9 @@ void TextRenderer::GlyphAtlas::prepare(Font * font, const std::u32string & str,
       fHasChanged = true;
     }
   }
+
+  /* Indicate if the atlas changed or not. */
+  return fHasChanged;
 }
 
 /******************************************************************************/
@@ -619,58 +688,71 @@ TextRenderer::Font * TextRenderer::GlyphAtlas::addFont(const std::string & path,
 
 //}
 
-///******************************************************************************/
-//void TextRenderer::Data::initCache()
-//{
-//  /* Calculate how many vertices are required. Since rectangles are required
-//   * that is 4 vertices per rectangle. */
-//  size_t reqVerts = kMaxGlyphCache * kVertsPerGlyph;
+/******************************************************************************/
+void TextRenderer::initCache()
+{
+  /* Calculate how many vertices are required. Since rectangles are required
+   * that is 4 vertices per rectangle. */
+  size_t reqVerts = kGlyphCacheLen * kVertsPerGlyph;
 
-//  /* Calculate how many indices must be created. Since the rectangles are built
-//   * from two triangles, that is 6 indexes per faces. */
-//  size_t reqIndices = kMaxGlyphCache * kIndicesPerGlyph;
+  /* Calculate how many indices must be created. Since the rectangles are built
+   * from two triangles, that is 6 indexes per faces. */
+  size_t reqIndices = kGlyphCacheLen * kIndicesPerGlyph;
 
-//  /* The vector that stores the list of indexes. This will never change however
-//   * we may only choose to draw a subject of the list (since the cache may not
-//   * always be full). */
-//  std::vector<uint16_t> indices;
-//  indices.resize(reqIndices);
+  /* The vector that stores the list of indexes. This will never change however
+   * we may only choose to draw a subject of the list (since the cache may not
+   * always be full). */
+  std::vector<uint16_t> indices;
+  indices.resize(reqIndices);
 
-//  /* Calculate all the indices for each face. */
-//  for(uint16_t i = 0; i < reqIndices; i+= kIndicesPerGlyph)
-//  {
-//    /* The indices of the first face. */
-//    indices.push_back(i);
-//    indices.push_back(i + 1);
-//    indices.push_back(1 + 2);
+  /* Calculate all the indices for each face. */
+  for(uint16_t i = 0; i < reqIndices; i+= kIndicesPerGlyph)
+  {
+    /* The indices of the first face. */
+    indices.push_back(i);
+    indices.push_back(i + 1);
+    indices.push_back(i + 2);
 
-//    /* The indices of the second face. */
-//    indices.push_back(i + 1);
-//    indices.push_back(i + 3);
-//    indices.push_back(i + 2);
-//  }
+    /* The indices of the second face. */
+    indices.push_back(i + 1);
+    indices.push_back(i + 3);
+    indices.push_back(i + 2);
+  }
 
-//  /* Create the indices buffer and load the index data. */
-//  glGenBuffers(1, &fIndexBuffID);
-//  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, fIndexBuffID);
-//  glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(uint16_t),
-//               indices.data(), GL_STATIC_DRAW);
+  /* Create the indices buffer and load the index data. */
+  glGenBuffers(1, &fIndexBuffID);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, fIndexBuffID);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(uint16_t),
+               indices.data(), GL_STATIC_DRAW);
 
-//  /* Reserver enough space in the vertices. */
-//  fVertices.resize(kMaxCachedVerts);
+  /* Reserver enough space in the vertices. */
+  fVertsAndTexCoords.resize(reqVerts * kFloatsPerVert);
 
-//  /* Create the vertex buffer. */
-//  glGenBuffers(1, &fVertBuffID);
-//  glBindBuffer(GL_ARRAY_BUFFER, fVertBuffID);
-//  glBufferData(GL_ARRAY_BUFFER, sizeof(Vector4f) * reqVerts,
-//               fVertices.data(), GL_DYNAMIC_DRAW);
-//}
+  /* Create the vertex buffer. */
+  glGenBuffers(1, &fVertBuffID);
+  glBindBuffer(GL_ARRAY_BUFFER, fVertBuffID);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(float) * fVertsAndTexCoords.size(),
+               fVertsAndTexCoords.data(), GL_STREAM_DRAW);
+}
 
 /******************************************************************************/
-TextRenderer::TextRenderer(size_t cacheLen)
+TextRenderer::TextRenderer(size_t cacheLen) : kGlyphCacheLen(cacheLen)
 {
   /* Create the glyph atlas. */
   fGlyphAtlas = std::make_unique<GlyphAtlas>();
+
+  /* Creat the texture to render the glyph. */
+  fTexture = std::make_unique<Texture2D>(*(fGlyphAtlas->fPixelMap.get()));
+
+//  /* The list of shaders. */
+//  std::vector<std::shared_ptr<Shader>> shaders =
+//  {
+//    std::make_shared<Shader>(Shader::Types::Vertex, kVertexShaderCode),
+//    std::make_shared<Shader>(Shader::Types::Fragment, kFragmentShaderCode)
+//  };
+
+//  /* Create the shader program. */
+//  fShaderProgram = std::make_unique<ShaderProgram>(shaders);
 }
 
 /******************************************************************************/
@@ -733,10 +815,110 @@ void TextRenderer::drawTextSimple(const std::string & text, Font * font,
   std::u32string u32Text = cvt.from_bytes(text);
 
   /* Prepare the glyph atlas to render the string. */
-  fGlyphAtlas->prepare(font, u32Text, height);
+  if(fGlyphAtlas->prepare(font, u32Text, height))
+  {
+    /* Pack the atlas. */
+    fGlyphAtlas->pack();
 
-  /* Pack the atlas. */
-  fGlyphAtlas->pack();
+    /* Update the texture with the new atlas pixel map. */
+    fTexture->setData(*(fGlyphAtlas->fPixelMap.get()));
+  }
+
+  /* The number of faces in the queue. */
+  size_t glyphIndex = 0;
+
+  /* The x offset from the origin position. */
+  Vector4f advancePos;
+
+  /* Iterate through all the characters in the string. */
+  for(auto codePoint : u32Text)
+  {
+    /* Get a reference to the glyph. */
+    Glyph * glyph = fGlyphAtlas->find(codePoint, height, font);
+
+    /* The current insert position. */
+    size_t vecPos = glyphIndex * kFloatsPerVert * kVertsPerGlyph;
+
+    /* Create the points for the face. */
+    Vector4f v0 = trans * (advancePos +
+        Vector4f::makePosition(0, 0, 0));
+
+    Vector4f v1 = trans * (advancePos +
+        Vector4f::makePosition(0, glyph->kHeight, 0));
+
+    Vector4f v2 = trans * (advancePos +
+        Vector4f::makePosition(glyph->kWidth, 0, 0));
+
+    Vector4f v3 = trans * (advancePos +
+        Vector4f::makePosition(glyph->kWidth, glyph->kHeight, 0));
+
+    /* Calculate the texture coordinates. */
+    Vector2f t0(static_cast<float>(glyph->fX) /
+                static_cast<float>(fGlyphAtlas->fPixelMap->width()),
+                static_cast<float>(glyph->fY) /
+                static_cast<float>(fGlyphAtlas->fPixelMap->height()));
+
+    Vector2f t1(static_cast<float>(glyph->fX) /
+                static_cast<float>(fGlyphAtlas->fPixelMap->width()),
+                static_cast<float>(glyph->fY + glyph->kHeight) /
+                static_cast<float>(fGlyphAtlas->fPixelMap->height()));
+
+    Vector2f t2(static_cast<float>(glyph->fX + glyph->kWidth) /
+                static_cast<float>(fGlyphAtlas->fPixelMap->width()),
+                static_cast<float>(glyph->fY) /
+                static_cast<float>(fGlyphAtlas->fPixelMap->height()));
+
+    Vector2f t3(static_cast<float>(glyph->fX + glyph->kWidth) /
+                static_cast<float>(fGlyphAtlas->fPixelMap->width()),
+                static_cast<float>(glyph->fY + glyph->kHeight) /
+                static_cast<float>(fGlyphAtlas->fPixelMap->height()));
+
+    /* Calculate the advance position for the next glyph. */
+    advancePos += Vector4f(glyph->kAdvanceX, glyph->kAdvanceY);
+
+    /* Insert the vertex in to the array. */
+    fVertsAndTexCoords[vecPos++] = v0.x();
+    fVertsAndTexCoords[vecPos++] = v0.y();
+    fVertsAndTexCoords[vecPos++] = v0.z();
+    fVertsAndTexCoords[vecPos++] = v0.w();
+
+    fVertsAndTexCoords[vecPos++] = t0.x();
+    fVertsAndTexCoords[vecPos++] = t0.y();
+
+    fVertsAndTexCoords[vecPos++] = v1.x();
+    fVertsAndTexCoords[vecPos++] = v1.y();
+    fVertsAndTexCoords[vecPos++] = v1.z();
+    fVertsAndTexCoords[vecPos++] = v1.w();
+
+    fVertsAndTexCoords[vecPos++] = t1.x();
+    fVertsAndTexCoords[vecPos++] = t1.y();
+
+
+    fVertsAndTexCoords[vecPos++] = v2.x();
+    fVertsAndTexCoords[vecPos++] = v2.y();
+    fVertsAndTexCoords[vecPos++] = v2.z();
+    fVertsAndTexCoords[vecPos++] = v2.w();
+
+    fVertsAndTexCoords[vecPos++] = t2.x();
+    fVertsAndTexCoords[vecPos++] = t2.y();
+
+
+    fVertsAndTexCoords[vecPos++] = v3.x();
+    fVertsAndTexCoords[vecPos++] = v3.y();
+    fVertsAndTexCoords[vecPos++] = v3.z();
+    fVertsAndTexCoords[vecPos++] = v3.w();
+
+    fVertsAndTexCoords[vecPos++] = t3.x();
+    fVertsAndTexCoords[vecPos++] = t3.y();
+
+    /* Increment the glyph index. */
+    glyphIndex++;
+
+
+  }
+
+
+
 
   PixelMap tempPixMap(*(fGlyphAtlas->fPixelMap.get()));
   tempPixMap.flipVertical();

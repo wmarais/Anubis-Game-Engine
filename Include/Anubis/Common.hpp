@@ -5,6 +5,7 @@
 #include "Common/Algorithms.hpp"
 #include "Common/Barrier.hpp"
 #include "Common/CircularQueue.hpp"
+#include "Common/DataPack.hpp"
 #include "Common/Float.hpp"
 #include "Common/IdentObj.hpp"
 #include "Common/Library.hpp"

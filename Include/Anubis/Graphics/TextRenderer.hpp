@@ -2,6 +2,9 @@
 #define ANUBIS_GRAPHICS_TEXT_RENDERER_HPP
 
 #include "Colour.hpp"
+#include "Texture2D.hpp"
+#include "ShaderProgram.hpp"
+
 #include "../Common.hpp"
 #include "../Math.hpp"
 
@@ -11,6 +14,27 @@ namespace Anubis
   {
     class TextRenderer
     {
+      /** The number of floating point values used to describe a face. Since
+       * the texture coordinates is saved with the 3D coordinates, that is:
+       * [x, y, z, w] [s, t], that is a total of 6 floats. */
+      static const size_t kFloatsPerVert = 6;
+
+      /** The number of vertices required per glyph face. Since quads are used
+       * that is 4. */
+      static const size_t kVertsPerGlyph = 4;
+
+      /** The number of indices required per glyph face. Since triangles are
+       * used to make quads, that is 6 per face. */
+      static const size_t kIndicesPerGlyph = 6;
+
+      /** The vertex shader code*/
+      static const std::string kVertexShaderCode;
+
+      /** The fragment shader code. */
+      static const std::string kFragmentShaderCode;
+
+
+
       /** A structure that contains the required information for rendering a
        * particular code point. */
       class Glyph;
@@ -19,14 +43,40 @@ namespace Anubis
        * the glyphs. */
       class GlyphAtlas;
 
+      /** The number of glyphs that is cached per draw call. */
+      const size_t kGlyphCacheLen;
+
       /** The instance of the glyph atlas. */
       std::unique_ptr<GlyphAtlas> fGlyphAtlas;
+
+      /** The texture used for rendering the atlas. */
+      std::unique_ptr<Texture2D> fTexture;
+
+      /** The shader used for rendering the glyphs. */
+      std::unique_ptr<ShaderProgram> fShaderProgram;
+
+
+      uint32_t fIndexBuffID;
+      uint32_t fVertBuffID;
+
+      /** The Vertexes and Texture coordinates used for each point. Each vertex
+       * is stored with it's texture coordinates, i.e. the  memory for "vertex"
+       * is packed as:
+       *
+       *   4 Floats          | 2 Floats    |
+       *  :------------------|:-----------:|
+       *  Vertex (x,y,z,w)   | Tex Coords  |
+       */
+      std::vector<float> fVertsAndTexCoords;
 
       /** The object storing the platform specific information of the class. */
       struct Data;
 
       /** A reference to the platform specific information. */
       //std::unique_ptr<Data> fData;
+
+      void initCache();
+
     public:
 
       class Font;

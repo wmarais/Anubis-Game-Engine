@@ -4,49 +4,20 @@
 using namespace Anubis::Graphics;
 
 /******************************************************************************/
-BufferObject::BufferObject(const std::vector<std::shared_ptr<Mesh>> & meshes)
+const uint32_t BufferObject::kGLModes[BufferObject::kModesCount] =
 {
-
-}
+  GL_STATIC_DRAW,
+  GL_DYNAMIC_DRAW,
+  GL_STREAM_DRAW
+};
 
 /******************************************************************************/
-BufferObject::BufferObject(std::initializer_list<std::shared_ptr<Mesh>> meshes)
+BufferObject::BufferObject(const std::vector<std::shared_ptr<Mesh>> & meshes,
+                           Modes mode) : fID(0)
 {
+  /* Creat the buffer object. */
+  //glGenBuffers(1, fID);
 
-//  /* Calculate all the memory required to store the meshes in Buffer Array. */
-//  size_t arrayBufferLen = 0;
-
-//  for(auto mesh : meshes)
-//  {
-//    arrayBuffLen +=
-//  }
-
-
-
-
-
-//  /* The lenght of the buffer object. */
-//  size_t bufferLength = 0;
-
-//  /* Reset space for the buffer array ids. */
-//  fArrayBuffIDs.resize(meshes.size());
-
-
-
-
-//  /* Generate the required buffers. */
-//  glGenBuffers(fArrayBuffIDs.size(), fArrayBuffIDs.data());
-
-//  /* Calculating the length of buffer. */
-//  for(auto mesh : meshes)
-//  {
-//    bufferLength += mesh->
-//  }
-
-//  glGenBuffers(1, &fID);
-//  glBindBuffer(GL_ARRAY_BUFFER, fID);
-
-//  /* Load the data of the meshes. */
 
 }
 
