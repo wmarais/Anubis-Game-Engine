@@ -133,7 +133,6 @@ set(AnubisCommon_HEADERS
   Include/Anubis/Common/Barrier.hpp
   Include/Anubis/Common/CircularQueue.hpp
   Include/Anubis/Common/DataPack.hpp
-  Include/Anubis/Common/Directory.hpp
   Include/Anubis/Common/File.hpp
   Include/Anubis/Common/Float.hpp
   Include/Anubis/Common/IdentObj.hpp
@@ -141,7 +140,6 @@ set(AnubisCommon_HEADERS
   Include/Anubis/Common/Log.hpp
   Include/Anubis/Common/Memory.hpp
   Include/Anubis/Common/Misc.hpp
-  Include/Anubis/Common/Resources.hpp
   Include/Anubis/Common/SubObj.hpp
   Include/Anubis/Common/System.hpp
   Include/Anubis/Common/UUID.hpp
@@ -153,12 +151,10 @@ set(AnubisCommon_SOURCES
   Source/Anubis/Common/Algorithms.cpp
   Source/Anubis/Common/Barrier.cpp
   Source/Anubis/Common/DataPack.cpp
-  Source/Anubis/Common/Directory.cpp
   Source/Anubis/Common/File.cpp
   Source/Anubis/Common/Float.cpp
   Source/Anubis/Common/Library.cpp
   Source/Anubis/Common/Log.cpp
-  Source/Anubis/Common/Resources.cpp
   Source/Anubis/Common/UUID.cpp
 
   Source/Anubis/Common/System/SocketWrapper.cpp
