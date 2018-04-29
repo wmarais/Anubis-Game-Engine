@@ -20,21 +20,38 @@ find_library(ANUBIS_HAS_WINSOCK2 ws2_32)
 find_library(ANUBIS_HAS_PHYSFS physfs)
 
 
-find_package(freetype CONFIG REQUIRED PATH_SUFFIXES "/cmake/freetype")
+#find_package(Freetype CONFIG REQUIRED PATH_SUFFIXES "/cmake/freetype")
 #find_package(PhysFS CONFIG REQUIRED PATH_SUFFIXES "/cmake/physfs")
-
-
-# THIS SUCKS BUT NEEDED TO FIX PHYSFS INCLUDE PATH ISSUE.
-include_directories("C:/Development/Libraries/include")
 
 ################################################################################
 # HOST DETECTION
 ################################################################################
 
-# Check if the host is big or little endian. */
+# Check if the host is big or little endian.
 test_big_endian(ANUBIS_HOST_IS_BIG_ENDIAN)
-if(NOT ANUBIS_HOST_IS_BIG_ENDIAN)
-  set(ANUBIS_HOST_IS_LITTLE_ENDIAN TRUE)
+if(NUBIS_HOST_IS_BIG_ENDIAN)
+  set(ANUBIS_CONF_ENDIANESS "ANUBIS_BIG_ENDIAN")
+else()
+  set(ANUBIS_CONF_ENDIANESS "ANUBIS_LITTLE_ENDIAN")
+endif()
+
+# Check the OS being compiled for.
+if(WIN32)
+  set(ANUBIS_CONF_OS "ANUBIS_OS_WINDOWS")
+elseif(APPLE)
+  set(ANUBIS_CONF_OS "ANUBIS_OS_OSX")
+elseif(UNIX)
+  set(ANUBIS_CONF_OS "ANUBIS_OS_UNIX")
+endif()
+
+# Check if the C++17 aligned_alloc() function exist.
+include(CheckFunctionExists)
+check_function_exists("aligned_alloc" ANUBIS_HAS_STD_ALIGNED_ALLOC)
+
+if(ANUBIS_HAS_STD_ALIGNED_ALLOC)
+    message("aligned_alloc exist!")
+else()
+    message("aligned_alloc does not exist!")
 endif()
 
 ################################################################################
@@ -42,13 +59,13 @@ endif()
 ################################################################################
 
 # Check if data-packs only must be loaded, instead of directories and data packs.
-option(ANUBIS_CONF_LOAD_DATA_PACK_ONLY
+option(ANUBIS_OPT_LOAD_DATA_PACK_ONLY
   "Only load data packs and not directories." OFF)
 
-if(ANUBIS_CONF_LOAD_DATA_PACK_ONLY)
-  set(ANUBIS_LOAD_DATA_PACK_ONLY "true")
+if(ANUBIS_OPT_LOAD_DATA_PACK_ONLY)
+  set(ANUBIS_CONF_LOAD_DATA_PACK_ONLY "true")
 else()
-  set(ANUBIS_LOAD_DATA_PACK_ONLY "false")
+  set(ANUBIS_CONF_LOAD_DATA_PACK_ONLY "false")
 endif()
 
 # Check if the maths library must be built.
@@ -104,10 +121,20 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
   # Check if SSE4.1 should be enabled.
   if(ANUBIS_ENABLE_SSE)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse4.1")
+    set(ANUBIS_CONF_SIMD_VERSION "ANUBIS_SIMD_SSE4")
+  else()
+    set(ANUBIS_CONF_SIMD_VERSION "ANUBIS_SIMD_NONE")
   endif()
 
-  # Enable all compiler warnings and C++ 14.
+  # Enable all compiler warnings and C++ 17.
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=c++17")
+
+  # Check if MINGW is used for compiling.
+  if(MINGW)
+      set(ANUBIS_CONF_COMPILER "ANUBIS_COMPILER_MINGW")
+  else()
+      set(ANUBIS_CONF_COMPILER "ANUBIS_COMPILER_GXX")
+  endif()
 endif()
 
 ################################################################################

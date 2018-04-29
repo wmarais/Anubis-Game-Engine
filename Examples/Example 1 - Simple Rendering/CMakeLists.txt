@@ -1,5 +1,6 @@
 
-find_package(glfw3 3.2 CONFIG REQUIRED PATH_SUFFIXES "/cmake/glfw3")
+find_package(glfw3 3.2 CONFIG PATH_SUFFIXES "/cmake/glfw3")
+
 
 set(AnubisExample_SimpleRendering_SOURCES
   Main.cpp
@@ -13,11 +14,14 @@ set(AnubisExample_SimpleRendering_HEADERS
 
 include_directories(Include)
 
-add_executable(AnubisExample_SimpleRendering
-  ${AnubisExample_SimpleRendering_SOURCES}
-  ${AnubisExample_SimpleRendering_HEADERS})
+# Check if GLFW was found. If not, don't build the example.
+if(glfw3_FOUND)
+  add_executable(AnubisExample_SimpleRendering
+    ${AnubisExample_SimpleRendering_SOURCES}
+    ${AnubisExample_SimpleRendering_HEADERS})
 
-target_link_libraries(AnubisExample_SimpleRendering AnubisSimulation AnubisGraphics AnubisCommon
-  AnubisMaths glfw)
+  target_link_libraries(AnubisExample_SimpleRendering AnubisSimulation AnubisGraphics AnubisCommon
+    AnubisMaths glfw)
 
-file(COPY "Font" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
+  file(COPY "Font" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
+endif()

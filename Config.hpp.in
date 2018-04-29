@@ -1,24 +1,104 @@
+/***************************************************************************//**
+ * @file  Config.hpp
+ *
+ * This file is automatically populated by CMake and it contains the build
+ * configuration for the engine. Modifications to this file is not persistent
+ * unless they are made to the Config.hpp.in file.
+ ******************************************************************************/
 #ifndef ANUBIS_CONFIG_HPP
 #define ANUBIS_CONFIG_HPP
 
-/** Indicates that SSE4 has been enabled. */
-#cmakedefine ANUBIS_ENABLE_SSE
+/***************************************************************************//**
+ * @defgroup SUPPORTED_COMPILERS Supported Compilers
+ * The list of supporeted compilers that the engine can be compiled with.
+ * @{
+ ******************************************************************************/
+/** The compiler used was g++, this is usually for linux builds. */
+#define ANUBIS_COMPILER_GXX     0
 
-/** Indicates that the host the software is running on is Big Endian. */
-#cmakedefine ANUBIS_HOST_IS_BIG_ENDIAN
+/** The compiler used was MinGW, this is usually for Windows builds. */
+#define ANUBIS_COMPILER_MINGW   1
 
-/** Indicates that the host the software is running on is Little Endian. */
-#cmakedefine ANUBIS_HOST_IS_LITTLE_ENDIAN
+/** The compiler used was Clang, this is usually for Linux and OSX builds. */
+#define ANUBIS_COMPILER_CLANG   2
 
-/** Indicates if the Windows RPCRT4 library has been found. This is used for
- * genrating UUIDs. */
-#cmakedefine ANUBIS_HAS_RPCRT4
+/** The compiler used was Visual Studio, this is usually for Windows Builds. */
+#define ANUBIS_COMPILER_MSVC    3
 
-/* Indicate if the host OS is windows. */
-#cmakedefine ANUBIS_OS_WINDOWS
+/** @} */
 
-/** Indicate if only data packs must be loaded instead of directories and data
- * packs. */
-#define ANUBIS_LOAD_DATA_PACK_ONLY @ANUBIS_LOAD_DATA_PACK_ONLY@
+/***************************************************************************//**
+ * @defgroup SUPPORTED_OPERATING_SYSTEMS Supported Operating Systems
+ * The list of supportred operating systems that the engine can be compiled for.
+ * @{
+ ******************************************************************************/
+/** Any modern Windows Operating System. */
+#define ANUBIS_OS_WINDOWS       10
+
+/** Any Unix based operating system, primarily targeted at Ubuntu and Debian. */
+#define ANUBIS_OS_UNIX          11
+
+/** Any modern OSX Operating System. */
+#define ANUBIS_OS_OSX           12
+
+/** @} */
+
+/***************************************************************************//**
+ * @defgroup HOST_ENDIANESS Supported Host Endianess
+ * The list of supported host endianess' that the host can be compiled for.
+ * @{
+ ******************************************************************************/
+/** The host is little endian. */
+#define ANUBIS_LITTLE_ENDIAN    20
+
+/** The host is big endian. */
+#define ANUBIS_BIG_ENDIAN       21
+
+/** @} */
+
+/***************************************************************************//**
+ * @defgroup SIMD_VERSION Supported SIMD Version
+ * The list of supported SIMD instruction sets that the engine can be compiled
+ * for.
+ * @{
+ ******************************************************************************/
+/** Do not enable any SIMD instructions. */
+#define ANUBIS_SIMD_NONE        30
+
+/** The host supports SSE4 SIMD instructions. This should be supported by both
+ * Intel and AMD CPUs. */
+#define ANUBIS_SIMD_SSE4        31
+
+/** @} */
+
+/***************************************************************************//**
+ * The Compiler that was used to compile the engine. It will be set to a value
+ * in @ref SUPPORTED_COMPILERS.
+ ******************************************************************************/
+#define ANUBIS_COMPILER         @ANUBIS_CONF_COMPILER@
+
+/***************************************************************************//**
+ * The Operating System that the engine was compiled for. It will be set to a
+ * value in @ref SUPPORTED_OPERATING_SYSTEMS.
+ ******************************************************************************/
+#define ANUBIS_OS               @ANUBIS_CONF_OS@
+
+/***************************************************************************//**
+ * The endianess of the host that the engine was compiled for. It can be set a
+ * value in @ref HOST_ENDIANESS.
+ ******************************************************************************/
+#define ANUBIS_HOST_ENDIANESS   @ANUBIS_CONF_ENDIANESS@
+
+/***************************************************************************//**
+ * The SIMD instruction set that is used for compilation. It can be set to a
+ * value in @ref SIMD_VERSION.
+ ******************************************************************************/
+#define ANUBIS_SIMD             @ANUBIS_CONF_SIMD_VERSION@
+
+/***************************************************************************//**
+ * Indicate if only data packs must be loaded instead of directories and data
+ * packs. This is set to either "true" or "false".
+ ******************************************************************************/
+#define ANUBIS_LOAD_DATA_PACK_ONLY @ANUBIS_CONF_LOAD_DATA_PACK_ONLY@
 
 #endif /* ANUBIS_CONFIG_HPP */
