@@ -64,27 +64,31 @@ namespace Anubis
 
 
 
-//      /*********************************************************************//**
-//       * Create a block of aligned memory. Since the C++11
-//       * @param size
-//       * @param align
-//       * @return
-//       */
-//      ANUBIS_FORCE_INLINE static void * alignedAlloc(size_t size, size_t align)
-//      {
-//        /** TODO - When / if mingw implements the C++11 aligned_alloc()
-//         * function, then remove this. */
-//        #if ANUBIS_COMPILER == ANUBIS_COMPILER_MINGW
-//            return __mingw_aligned_malloc(size, align);
-//        #else
-//          return aligned_alloc(align, size);
-//        #endif
-//      }
+      /*********************************************************************//**
+       * Create a block of aligned memory. Since the C++11
+       * @param align
+       * @param size
+       * @return
+       */
+      ANUBIS_FORCE_INLINE static void * alignedAlloc(size_t align, size_t size)
+      {
+        /** TODO - When / if mingw implements the C++11 aligned_alloc()
+         * function, then remove this. */
+        #if ANUBIS_COMPILER == ANUBIS_COMPILER_MINGW
+            return __mingw_aligned_malloc(size, align);
+        #else
+          return aligned_alloc(align, size);
+        #endif
+      }
 
-//      ANUBIS_FORCE_INLINE static void alignedFree(void * ptr)
-//      {
-//        __mingw_aligned_free(ptr);
-//      }
+      ANUBIS_FORCE_INLINE static void alignedFree(void * ptr)
+      {
+        #if ANUBIS_COMPILER == ANUBIS_COMPILER_MINGW
+          __mingw_aligned_free(ptr);
+        #else
+          free(ptr);
+        #endif
+      }
 
       /*********************************************************************//**
        * Read a value from a byte buffer which is organised in big endian

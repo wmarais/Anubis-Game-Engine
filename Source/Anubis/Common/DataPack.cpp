@@ -2,7 +2,7 @@
 
 using namespace Anubis::Common;
 
-const std::string DataPack::kBasePath = u8"./Data";
+const std::string DataPack::kBasePath = u8"./Data/";
 const std::string DataPack::kExtension = u8".anpkg";
 const std::string DataPack::kMetaExtension = u8".anmeta";
 
@@ -12,21 +12,29 @@ DataPack::DataPack(const std::string & path)
   /* A flag to indicate whether both paths were invalid. */
   bool bothInvalid = true;
 
+  /* Build the full path the directory. */
+  std::string dirPath = kBasePath;
+  dirPath.append(path);
+
+  /* Build the full path the file. */
+  std::string filePath = dirPath;
+  filePath.append(kExtension);
+
   /* Check if there is a directory at the path. */
-  if(dirExist(path) && !ANUBIS_LOAD_DATA_PACK_ONLY)
+  if(boost::filesystem::is_directory(dirPath) && !ANUBIS_LOAD_DATA_PACK_ONLY)
   {
     /* Load the contents of the dir. */
-    loadDir(path);
+    loadDir(dirPath);
 
     /* Mark atleast one path as valid. */
     bothInvalid = false;
   }
 
   /* Check if a datapack file by that name exist. */
-  if(fileExist(path))
+  if(boost::filesystem::is_regular_file(filePath))
   {
     /* Load the contents of the data pack. */
-    loadPack(path);
+    loadPack(filePath);
 
     /* Mark atleast one path as valid. */
     bothInvalid = false;

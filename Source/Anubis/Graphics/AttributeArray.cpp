@@ -20,7 +20,7 @@ AttributeArray::AttributeArray(const std::string & name,
 
   /* Create the memory to store the values information. */
   fMemory = std::unique_ptr<void, decltype(&Memory::alignedFree)>
-    (Memory::alignedAlloc(fMemLength, Memory::kGPUAlignment),
+    (Memory::alignedAlloc(Memory::kGPUAlignment, fMemLength),
      Memory::alignedFree);
 
   /* Copy the data. */
@@ -42,7 +42,7 @@ AttributeArray::AttributeArray(const std::string & name,
 
   /* Create the memory to store the values information. */
   fMemory = std::unique_ptr<void, decltype(&Memory::alignedFree)>
-    (Memory::alignedAlloc(fMemLength, Memory::kGPUAlignment),
+    (Memory::alignedAlloc(Memory::kGPUAlignment, fMemLength),
      Memory::alignedFree);
 
   /* Copy the data. */
@@ -64,7 +64,7 @@ AttributeArray::AttributeArray(const std::string & name,
 
   /* Create the memory to store the values information. */
   fMemory = std::unique_ptr<void, decltype(&Memory::alignedFree)>
-    (Memory::alignedAlloc(fMemLength, Memory::kGPUAlignment),
+    (Memory::alignedAlloc(Memory::kGPUAlignment, fMemLength),
      Memory::alignedFree);
 
   /* Copy the data. */
@@ -83,7 +83,7 @@ AttributeArray::AttributeArray(const AttributeArray & cp) :
 
   /* Create the memory to store the values information. */
   fMemory = std::unique_ptr<void, decltype(&Memory::alignedFree)>
-    (Memory::alignedAlloc(fMemLength, Memory::kGPUAlignment),
+    (Memory::alignedAlloc(Memory::kGPUAlignment, fMemLength),
      Memory::alignedFree);
 
   /* Copy the data. */
@@ -101,7 +101,7 @@ AttributeArray & AttributeArray::operator = (const AttributeArray & rhs)
 
   /* Create the memory to store the values information. */
   fMemory = std::unique_ptr<void, decltype(&Memory::alignedFree)>
-    (Memory::alignedAlloc(fMemLength, Memory::kGPUAlignment),
+    (Memory::alignedAlloc(Memory::kGPUAlignment, fMemLength),
      Memory::alignedFree);
 
   /* Copy the data. */

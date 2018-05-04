@@ -30,6 +30,10 @@
 #include <locale>
 #include <codecvt>
 
+#include <cstdlib>
+
+#include <boost/filesystem.hpp>
+
 //#define ANUBIS_HAS_SSE
 #define ANUBIS_HOST_IS_LITTLE_ENDIAN
 

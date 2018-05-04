@@ -47,57 +47,57 @@ std::vector<std::string> Anubis::split(const std::string & str,
   return tokens;
 }
 
-/******************************************************************************/
-bool dirExist(const std::string & path)
-{
-#ifdef ANUBIS_OS_WINDOWS
-  DWORD ftyp = GetFileAttributesA(path.c_str());
-  if (ftyp == INVALID_FILE_ATTRIBUTES)
-    return false;  //something is wrong with your path!
+///******************************************************************************/
+//bool dirExist(const std::string & path)
+//{
+//#ifdef ANUBIS_OS == ANUBIS_OS_WINDOWS
+//  DWORD ftyp = GetFileAttributesA(path.c_str());
+//  if (ftyp == INVALID_FILE_ATTRIBUTES)
+//    return false;  //something is wrong with your path!
 
-  if (ftyp & FILE_ATTRIBUTE_DIRECTORY)
-    return true;   // this is a directory!
+//  if (ftyp & FILE_ATTRIBUTE_DIRECTORY)
+//    return true;   // this is a directory!
 
-  return false;    // this is not a directory!
-#else
-  ANUBIS_THROW_RUNTIME_EXCEPTION("Function not implemented");
-#endif
-}
+//  return false;    // this is not a directory!
+//#else
+//  ANUBIS_THROW_RUNTIME_EXCEPTION("Function not implemented");
+//#endif
+//}
 
-/******************************************************************************/
-bool fileExist(const std::string & path)
-{
-#ifdef ANUBIS_OS_WINDOWS
-  DWORD ftyp = GetFileAttributesA(path.c_str());
-  if (ftyp == INVALID_FILE_ATTRIBUTES)
-    return false;  //something is wrong with your path!
-  return true;
-#else
-  ANUBIS_THROW_RUNTIME_EXCEPTION("Function not implemented");
-#endif
-}
+///******************************************************************************/
+//bool fileExist(const std::string & path)
+//{
+//#ifdef ANUBIS_OS_WINDOWS
+//  DWORD ftyp = GetFileAttributesA(path.c_str());
+//  if (ftyp == INVALID_FILE_ATTRIBUTES)
+//    return false;  //something is wrong with your path!
+//  return true;
+//#else
+//  ANUBIS_THROW_RUNTIME_EXCEPTION("Function not implemented");
+//#endif
+//}
 
-/******************************************************************************/
-std::vector<std::string> allFiles(const std::string & path)
-{
-#ifdef ANUBIS_OS_WINDOWS
-  /* the list of files in the directory. */
-  std::vector<std::string> files;
+///******************************************************************************/
+//std::vector<std::string> allFiles(const std::string & path)
+//{
+//#ifdef ANUBIS_OS_WINDOWS
+//  /* the list of files in the directory. */
+//  std::vector<std::string> files;
 
-  HANDLE hFind;
-  WIN32_FIND_DATA data;
+//  HANDLE hFind;
+//  WIN32_FIND_DATA data;
 
-  /* Find the first file in the path. */
-  hFind = FindFirstFile("c:\\*.*", &data);
-  if (hFind != INVALID_HANDLE_VALUE)
-  {
+//  /* Find the first file in the path. */
+//  hFind = FindFirstFile("c:\\*.*", &data);
+//  if (hFind != INVALID_HANDLE_VALUE)
+//  {
 
-    do {
-      printf("%s\n", data.cFileName);
-    } while (FindNextFile(hFind, &data));
-    FindClose(hFind);
-  }
-#else
-  ANUBIS_THROW_RUNTIME_EXCEPTION("Function not implemented");
-#endif
-}
+//    do {
+//      printf("%s\n", data.cFileName);
+//    } while (FindNextFile(hFind, &data));
+//    FindClose(hFind);
+//  }
+//#else
+//  ANUBIS_THROW_RUNTIME_EXCEPTION("Function not implemented");
+//#endif
+//}
