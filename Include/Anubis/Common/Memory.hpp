@@ -77,7 +77,7 @@ namespace Anubis
         #if ANUBIS_COMPILER == ANUBIS_COMPILER_MINGW
             return __mingw_aligned_malloc(size, align);
         #else
-          return aligned_alloc(align, size);
+          return std::aligned_alloc(align, size);
         #endif
       }
 

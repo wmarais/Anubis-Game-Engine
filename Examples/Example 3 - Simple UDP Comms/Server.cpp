@@ -77,14 +77,14 @@ int main(int argc, char * argv[])
     ANUBIS_LOG_FATAL_ERROR(ex.what());
 
     /* Wait for the user to press enter. */
-    pause();
+    Anubis::pause();
 
     /* Exit with a failure. */
     return EXIT_FAILURE;
   }
 
   /* Wait for the user to press enter. */
-  pause();
+  Anubis::pause();
 
   /* Return with success. */
   return EXIT_SUCCESS;

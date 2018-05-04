@@ -442,11 +442,16 @@ std::string IPEndPoint::ip() const
     sockaddr_in * sockAddr = reinterpret_cast<sockaddr_in*>
         (fData->fAddrData.get());
 
-    /* Print the address to a string. */
-    ss << (unsigned int)(sockAddr->sin_addr.S_un.S_un_b.s_b1) << "." <<
-          (unsigned int)(sockAddr->sin_addr.S_un.S_un_b.s_b2) << "." <<
-          (unsigned int)(sockAddr->sin_addr.S_un.S_un_b.s_b3) << "." <<
-          (unsigned int)(sockAddr->sin_addr.S_un.S_un_b.s_b4);
+    #if ANUBIS_OS == ANUBIS_OS_WINDOWS
+      /* Print the address to a string. */
+      ss << (unsigned int)(sockAddr->sin_addr.S_un.S_un_b.s_b1) << "." <<
+            (unsigned int)(sockAddr->sin_addr.S_un.S_un_b.s_b2) << "." <<
+            (unsigned int)(sockAddr->sin_addr.S_un.S_un_b.s_b3) << "." <<
+            (unsigned int)(sockAddr->sin_addr.S_un.S_un_b.s_b4);
+    #elif ANUBIS_OS == ANUBIS_OS_UNIX
+
+    #endif
+
   }
   else
   {
@@ -458,8 +463,12 @@ std::string IPEndPoint::ip() const
     std::vector<uint16_t> shorts;
     for(size_t i = 0; i < kIPv6ShortsCount; i++)
     {
-      shorts.push_back(Memory::fromBigEndian<uint16_t>(
-        sockAddr->sin6_addr.u.Byte, kIPv6OctetCount, i * sizeof(uint16_t)));
+      #if ANUBIS_OS == ANUBIS_OS_WINDOWS
+        shorts.push_back(Memory::fromBigEndian<uint16_t>(
+          sockAddr->sin6_addr.u.Byte, kIPv6OctetCount, i * sizeof(uint16_t)));
+      #elif ANUBIS_OS == ANUBIS_OS_UNIX
+
+      #endif
     }
 
     /* Find the longest range of 0's. */

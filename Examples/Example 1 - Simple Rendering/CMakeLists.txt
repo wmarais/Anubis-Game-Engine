@@ -21,7 +21,7 @@ if(glfw3_FOUND)
     ${AnubisExample_SimpleRendering_HEADERS})
 
   target_link_libraries(AnubisExample_SimpleRendering AnubisSimulation AnubisGraphics AnubisCommon
-    AnubisMaths glfw)
+    AnubisMaths glfw dl)
 
   file(COPY "Font" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
 endif()

@@ -20,8 +20,11 @@ find_library(ANUBIS_HAS_WINSOCK2 ws2_32)
 find_library(ANUBIS_HAS_PHYSFS physfs)
 
 
-#find_package(Freetype CONFIG REQUIRED PATH_SUFFIXES "/cmake/freetype")
-#find_package(PhysFS CONFIG REQUIRED PATH_SUFFIXES "/cmake/physfs")
+find_package(Freetype REQUIRED)
+include_directories(${FREETYPE_INCLUDE_DIRS})
+
+find_package(Boost REQUIRED COMPONENTS filesystem)
+include_directories(${Boost_INCLUDE_DIRS})
 
 ################################################################################
 # HOST DETECTION
@@ -120,7 +123,7 @@ endif()
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
   # Check if SSE4.1 should be enabled.
   if(ANUBIS_ENABLE_SSE)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse4.1")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse4.1 -pthread")
     set(ANUBIS_CONF_SIMD_VERSION "ANUBIS_SIMD_SSE4")
   else()
     set(ANUBIS_CONF_SIMD_VERSION "ANUBIS_SIMD_NONE")
@@ -318,6 +321,7 @@ configure_file(Config.hpp.in "Include/Anubis/Common/Config.hpp")
 ################################################################################
 # Builds the common library.
 add_library(AnubisCommon STATIC ${AnubisCommon_SOURCES} ${AnubisCommon_HEADERS})
+target_link_libraries(AnubisCommon Boost::filesystem)
 
 if(ANUBIS_BUILD_MATHS)
   add_library(AnubisMaths STATIC ${AnubisMath_SOURCES} ${AnubisMath_HEADERS})
@@ -332,7 +336,7 @@ if(ANUBIS_BUILD_GRAPHICS)
   add_library(AnubisGraphics STATIC ${AnubisGraphics_SOURCES}
     ${AnubisGraphics_HEADERS})
 
-    target_link_libraries(AnubisGraphics freetype)
+    target_link_libraries(AnubisGraphics ${FREETYPE_LIBRARY})
 endif()
 
 if(ANUBIS_BUILD_NETWORKING)

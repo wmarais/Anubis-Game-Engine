@@ -1,5 +1,5 @@
 # Find the Google Test package.
-find_package(gtest)
+find_package(GTest)
 
 include_directories(${GTEST_INCLUDE_DIRS})
 
@@ -21,4 +21,5 @@ add_executable(AnubisUnitTest ${AnubisUnitTest_HEADERS}
   ${AnubisUnitTest_SOURCES})
 
 # Link to all the required libraries.
-target_link_libraries(AnubisUnitTest AnubisCommon AnubisMaths AnubisGraphics AnubisPhysics ${GTEST_LIBRARIES})
+target_link_libraries(AnubisUnitTest AnubisCommon AnubisMaths AnubisGraphics
+    AnubisPhysics ${GTEST_LIBRARIES})

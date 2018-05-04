@@ -20,6 +20,8 @@ struct Socket::Data final
 
   Data(const Data & cp) = delete;
   Data & operator = (const Data & rhs) = delete;
+
+  static int getSocketErrorCode();
 };
 
 /******************************************************************************/
@@ -49,17 +51,21 @@ Socket::Data::Data(uint16_t family, int type, int protocol) :
   if(fHandle == INVALID_SOCKET)
   {
     ANUBIS_THROW_RUNTIME_EXCEPTION("socket() failed with error code: " <<
-                                   WSAGetLastError());
+                                   getSocketErrorCode());
   }
 
-  /* Allow address reuse. */
-  BOOL optVal = TRUE;
-  if(setsockopt(fHandle, SOL_SOCKET, SO_REUSEADDR,
-                reinterpret_cast<char*>(&optVal), sizeof(BOOL)) != 0)
-  {
-    ANUBIS_THROW_RUNTIME_EXCEPTION("setsockopt() failed with error code: " <<
-                                   WSAGetLastError());
-  }
+  #if ANUBIS_OS == ANUBIS_OS_WINDOWS
+    /* Allow address reuse. */
+    BOOL optVal = TRUE;
+    if(setsockopt(fHandle, SOL_SOCKET, SO_REUSEADDR,
+                  reinterpret_cast<char*>(&optVal), sizeof(BOOL)) != 0)
+    {
+      ANUBIS_THROW_RUNTIME_EXCEPTION("setsockopt() failed with error code: " <<
+                                     getSocketErrorCode());
+    }
+  #elif ANUBIS_OS == ANUBIS_OS_UNIX || ANUBIS_OS == ANUBIS_OS_OSX
+
+  #endif
 }
 
 /******************************************************************************/
@@ -68,11 +74,15 @@ Socket::Data::~Data()
   /* Check if the socket is open. */
   if(fHandle != INVALID_SOCKET)
   {
+    #if ANUBIS_OS == ANUBIS_OS_WINDOWS
     /* Close the socket and log any errors. */
     if(closesocket(fHandle) != 0)
+    #elif ANUBIS_OS == ANUBIS_OS_UNIX || ANUBIS_OS == ANUBIS_OS_OSX
+    if(close(fHandle) != 0)
+    #endif
     {
       ANUBIS_LOG_ERROR("closesocket() failed with error code: " <<
-                       WSAGetLastError());
+                       getSocketErrorCode());
     }
   }
 
@@ -92,6 +102,16 @@ Socket::Data::~Data()
   {
     ANUBIS_LOG_ERROR(ex.what());
   }
+}
+
+/******************************************************************************/
+int Socket::Data::getSocketErrorCode()
+{
+  #if ANUBIS_OS == ANUBIS_OS_WINDOWS
+    return WSAGetLastError();
+  #elif ANUBIS_OS == ANUBIS_OS_UNIX || ANUBIS_OS == ANUBIS_OS_OSX
+    return errno;
+  #endif
 }
 
 /******************************************************************************/
@@ -146,7 +166,7 @@ IPEndPoint Socket::getEP() const
                  &addrLen) != 0)
   {
     ANUBIS_THROW_RUNTIME_EXCEPTION("getsockname() failed with error code: " <<
-                                   WSAGetLastError());
+                                   Socket::Data::getSocketErrorCode());
   }
 
   /* Return the IP endpoint information of the socket. */
@@ -160,7 +180,7 @@ std::unique_ptr<Socket> Socket::listen(size_t backlog)
   if(::listen(fData->fHandle, backlog) != 0)
   {
     ANUBIS_THROW_RUNTIME_EXCEPTION("listen() failed with error code: " <<
-                                   WSAGetLastError());
+                                   Socket::Data::getSocketErrorCode());
   }
 
   /* Accept the connection and read the address of the client. */
@@ -185,18 +205,25 @@ bool Socket::connect(const IPEndPoint & ep)
     return true;
   }
 
-  ANUBIS_LOG_DEBUG("Connection failed with error code: " << WSAGetLastError());
+  ANUBIS_LOG_DEBUG("Connection failed with error code: " <<
+                   Socket::Data::getSocketErrorCode());
   return false;
 }
 
 /******************************************************************************/
 void Socket::shutdown()
 {
+  #if ANUBIS_OS == ANUBIS_OS_WINDOWS
+    int how = SD_SEND;
+  #elif ANUBIS_OS == ANUBIS_OS_UNIX || ANUBIS_OS == ANUBIS_OS_OSX
+    int how = SHUT_WR;
+  #endif
+
   /* Shutdown the socket. */
-  if(::shutdown(fData->fHandle, SD_SEND) != 0)
+  if(::shutdown(fData->fHandle, how) != 0)
   {
     ANUBIS_THROW_RUNTIME_EXCEPTION("shutdown() failed with error code: " <<
-                                   WSAGetLastError());
+                                   Socket::Data::getSocketErrorCode());
   }
 }
 
@@ -230,7 +257,7 @@ bool Socket::send(const std::vector<uint8_t> & data)
     else
     {
       ANUBIS_THROW_RUNTIME_EXCEPTION("send() failed with error code: " <<
-                                     WSAGetLastError());
+                                     Socket::Data::getSocketErrorCode());
     }
   }
 
@@ -272,7 +299,7 @@ bool Socket::recv(std::vector<uint8_t> & data, size_t len)
     else
     {
       ANUBIS_THROW_RUNTIME_EXCEPTION("recv() failed with error code: " <<
-                                     WSAGetLastError());
+                                     Socket::Data::getSocketErrorCode());
     }
   }
 
@@ -317,7 +344,7 @@ bool Socket::sendTo(const IPEndPoint & ep, const std::vector<uint8_t> & data)
     else
     {
       ANUBIS_THROW_RUNTIME_EXCEPTION("sendto() failed with error code: " <<
-                                     WSAGetLastError());
+                                     Socket::Data::getSocketErrorCode());
     }
   }
 
@@ -333,7 +360,7 @@ bool Socket::recvFrom(IPEndPoint & ep, std::vector<uint8_t> & data,
   struct sockaddr_storage addrData;
 
   /* The length of the address. */
-  int addrDataLen = sizeof(struct sockaddr_storage);
+  socklen_t addrDataLen = sizeof(struct sockaddr_storage);
 
   /* Resize the buffer based on what was expected to be read. */
   data.resize(maxLen);
@@ -365,5 +392,5 @@ bool Socket::recvFrom(IPEndPoint & ep, std::vector<uint8_t> & data,
 
   /* Else an error occured. */
   ANUBIS_THROW_RUNTIME_EXCEPTION("recvfrom() failed with result: " << result
-    << ", error code: " << WSAGetLastError() << ".");
+    << ", error code: " << Socket::Data::getSocketErrorCode() << ".");
 }
